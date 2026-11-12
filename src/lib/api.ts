@@ -32,7 +32,10 @@ export class CardiApiClient {
       headers["Authorization"] = `Bearer ${this.token}`;
     }
 
-    const res = await fetch(`${API_BASE_URL}${path}`, {
+    const isClient = typeof window !== "undefined";
+    const url = isClient ? `/api${path}` : `${API_BASE_URL}${path}`;
+
+    const res = await fetch(url, {
       ...options,
       headers,
     });
