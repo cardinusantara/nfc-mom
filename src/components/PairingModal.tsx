@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import QRCode from "qrcode";
 import {
   Smartphone,
   QrCode,
@@ -26,6 +27,7 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
 
   // Real QR Pairing State
   const [pairingId, setPairingId] = useState<string>("");
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [isLoadingPairing, setIsLoadingPairing] = useState(false);
   const [pairingExpired, setPairingExpired] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -56,6 +58,13 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
     try {
       const res = await cardiApi.startPairing();
       setPairingId(res.pairingId);
+
+      const dataUrl = await QRCode.toDataURL(res.pairingId, {
+        width: 220,
+        margin: 1,
+        color: { dark: "#0F172A", light: "#FFFFFF" },
+      });
+      setQrDataUrl(dataUrl);
 
       // Start polling loop every 2.5s
       pollTimerRef.current = setInterval(async () => {
@@ -157,10 +166,6 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
     setPairedApp(null);
   };
 
-  const qrImageUrl = pairingId
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pairingId)}`
-    : "";
-
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-[#18181b] border border-white/15 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150 text-white">
@@ -261,10 +266,10 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
                     Muat Ulang
                   </button>
                 </div>
-              ) : qrImageUrl ? (
+              ) : qrDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={qrImageUrl}
+                  src={qrDataUrl}
                   alt="Scan QR Pairing Code"
                   width={200}
                   height={200}

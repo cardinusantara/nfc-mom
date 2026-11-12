@@ -1,31 +1,33 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import QRCode from "qrcode";
 import {
-  Smartphone,
   Mail,
   QrCode,
-  ShieldCheck,
   ArrowRight,
-  Sparkles,
   CheckCircle2,
   RefreshCw,
-  Lock,
   Globe,
   Sun,
   Moon,
+  Copy,
+  Check,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { cardiApi } from "@/lib/api";
+import { UserAccount } from "@/lib/types";
 import { CardiMomLogo } from "@/components/CardiMomLogo";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 export default function LoginPage() {
   const router = useRouter();
   const {
-    loginUser,
+    setSession,
     loginWithGoogle,
     theme,
     toggleTheme,
@@ -37,11 +39,14 @@ export default function LoginPage() {
 
   const [authMethod, setAuthMethod] = useState<"qr" | "email">("qr");
 
-  // QR Pairing State
-  const [pairingCode, setPairingCode] = useState("892-415");
-  const [isVerifyingPairing, setIsVerifyingPairing] = useState(false);
+  // QR Pairing State (ADR 0002)
+  const [pairingId, setPairingId] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [isLoadingPairing, setIsLoadingPairing] = useState(false);
+  const [pairingExpired, setPairingExpired] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // Email OTP State
+  // Email OTP State (ADR 0007)
   const [email, setEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [isOtpSent, setIsOtpSent] = useState(false);
@@ -49,36 +54,114 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  const initPairing = useCallback(async () => {
+    stopPolling();
+    setIsLoadingPairing(true);
+    setPairingExpired(false);
+    setErrorMessage(null);
+
+    try {
+      const res = await cardiApi.startPairing();
+      setPairingId(res.pairingId);
+
+      const dataUrl = await QRCode.toDataURL(res.pairingId, {
+        width: 240,
+        margin: 1,
+        color: {
+          dark: "#0B1528",
+          light: "#FFFFFF",
+        },
+      });
+      setQrDataUrl(dataUrl);
+
+      // Poll every 2 seconds for confirmation from Cardi MoM mobile app
+      pollTimerRef.current = setInterval(async () => {
+        try {
+          const pollRes = await cardiApi.pollPairing(res.pairingId);
+          if (pollRes.status === "confirmed") {
+            stopPolling();
+            cardiApi.setToken(pollRes.sessionToken);
+            setSession(pollRes.sessionToken, pollRes.account);
+            setSuccessMessage("Perangkat aplikasi mobile berhasil tersambung!");
+            setTimeout(() => {
+              router.push("/dashboard/card");
+            }, 400);
+          } else if (pollRes.status === "expired") {
+            stopPolling();
+            setPairingExpired(true);
+          }
+        } catch {
+          // ignore transient poll error
+        }
+      }, 2000);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Gagal membuat sesi pairing aplikasi mobile.";
+      setErrorMessage(msg);
+    } finally {
+      setIsLoadingPairing(false);
+    }
+  }, [router, setSession, stopPolling]);
+
+  useEffect(() => {
+    if (authMethod === "qr") {
+      initPairing();
+    } else {
+      stopPolling();
+    }
+    return () => {
+      stopPolling();
+    };
+  }, [authMethod, initPairing, stopPolling]);
+
+  const handleCopyPairingId = () => {
+    if (!pairingId) return;
+    navigator.clipboard.writeText(pairingId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   // Handle Google Sign In Success
   const handleGoogleSuccess = (userData: {
     email: string;
     name: string;
     avatarUrl?: string;
     sessionToken: string;
+    account?: UserAccount;
   }) => {
-    setSuccessMessage(`Berhasil masuk sebagai ${userData.name}!`);
-    loginWithGoogle(
-      {
-        email: userData.email,
-        name: userData.name,
-        avatarUrl: userData.avatarUrl,
-      },
-      userData.sessionToken
-    );
+    cardiApi.setToken(userData.sessionToken);
+    if (userData.account) {
+      setSession(userData.sessionToken, {
+        ...userData.account,
+        name: userData.name || userData.account.name,
+        avatarUrl: userData.avatarUrl || userData.account.avatarUrl,
+      });
+    } else {
+      loginWithGoogle(
+        {
+          email: userData.email,
+          name: userData.name,
+          avatarUrl: userData.avatarUrl,
+        },
+        userData.sessionToken
+      );
+    }
 
+    setSuccessMessage(`Berhasil masuk sebagai ${userData.name}!`);
     setTimeout(() => {
       router.push("/dashboard/card");
     }, 400);
-  };
-
-  // Handle simulate QR confirmation from mobile app
-  const handleConfirmMobilePairing = () => {
-    setIsVerifyingPairing(true);
-    setTimeout(() => {
-      setIsVerifyingPairing(false);
-      loginUser("deo");
-      router.push("/dashboard/card");
-    }, 800);
   };
 
   // Handle Send OTP
@@ -87,11 +170,17 @@ export default function LoginPage() {
     if (!email) return;
     setIsLoading(true);
     setErrorMessage(null);
+    setSuccessMessage(null);
     try {
-      await cardiApi.requestEmailOtp(email);
+      await cardiApi.sendEmailCode(email);
       setIsOtpSent(true);
-    } catch {
-      setErrorMessage("Gagal mengirim kode OTP. Coba lagi.");
+      setSuccessMessage("Kode OTP 6 digit berhasil dikirim ke email Anda.");
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Gagal mengirim kode OTP. Periksa alamat email dan coba lagi.";
+      setErrorMessage(msg);
     } finally {
       setIsLoading(false);
     }
@@ -104,12 +193,19 @@ export default function LoginPage() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const res = await cardiApi.verifyEmailOtp(email, otpCode);
-      const prefix = email.split("@")[0] || "user";
-      loginUser(prefix);
-      router.push("/dashboard/card");
-    } catch {
-      setErrorMessage("Kode OTP salah atau telah kedaluwarsa.");
+      const res = await cardiApi.verifyEmailCode(email, otpCode, "web_nfc_portal");
+      cardiApi.setToken(res.token);
+      setSession(res.token, res.account);
+      setSuccessMessage(`Berhasil masuk sebagai ${res.account.email}!`);
+      setTimeout(() => {
+        router.push("/dashboard/card");
+      }, 400);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Kode OTP salah atau telah kedaluwarsa.";
+      setErrorMessage(msg);
     } finally {
       setIsLoading(false);
     }
@@ -203,8 +299,9 @@ export default function LoginPage() {
           </div>
 
           {errorMessage && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-xs text-red-600 dark:text-red-400">
-              {errorMessage}
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{errorMessage}</span>
             </div>
           )}
 
@@ -265,49 +362,98 @@ export default function LoginPage() {
           {/* Method: QR Device Pairing */}
           {authMethod === "qr" && (
             <div className="flex flex-col items-center text-center space-y-4">
-              <p className={`text-xs leading-relaxed ${isDark ? "text-slate-300" : "text-slate-600"}`}>
-                Buka aplikasi <strong>Cardi MoM</strong> di ponsel Android/iOS Anda, pilih menu <strong>Tautkan Web</strong>, lalu masukkan kode:
+              <p
+                className={`text-xs leading-relaxed max-w-sm ${
+                  isDark ? "text-slate-300" : "text-slate-600"
+                }`}
+              >
+                Buka aplikasi <strong>Cardi MoM</strong> di ponsel Anda, buka menu{" "}
+                <strong>Tautkan Web</strong>, lalu pindai kode QR di bawah:
               </p>
 
               <div
-                className={`border px-6 py-3 rounded-2xl flex items-center gap-3 shadow-inner ${
-                  isDark ? "bg-[#070F1E] border-white/20" : "bg-slate-100 border-slate-200"
+                className={`p-3 rounded-2xl border shadow-md relative flex items-center justify-center min-w-[240px] min-h-[240px] ${
+                  isDark
+                    ? "bg-[#070F1E] border-white/15"
+                    : "bg-white border-slate-200"
                 }`}
               >
-                <span className="text-2xl font-mono font-black tracking-widest text-sky-600 dark:text-sky-400">
-                  {pairingCode}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const r = Math.floor(100000 + Math.random() * 900000).toString();
-                    setPairingCode(r.slice(0, 3) + "-" + r.slice(3));
-                  }}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition p-1"
-                  title="Acak kode baru"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </button>
+                {isLoadingPairing ? (
+                  <div className="flex flex-col items-center justify-center gap-2 p-8 text-xs text-slate-400">
+                    <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
+                    <span>Menghubungkan ke server pairing...</span>
+                  </div>
+                ) : pairingExpired ? (
+                  <div className="flex flex-col items-center justify-center gap-2.5 p-6 text-center">
+                    <AlertCircle className="w-8 h-8 text-amber-500" />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                      Sesi QR telah kedaluwarsa
+                    </span>
+                    <button
+                      type="button"
+                      onClick={initPairing}
+                      className="mt-1 bg-sky-600 hover:bg-sky-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Buat Kode QR Baru</span>
+                    </button>
+                  </div>
+                ) : qrDataUrl ? (
+                  <div className="flex flex-col items-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={qrDataUrl}
+                      alt="Kode QR Pairing Cardi MoM"
+                      width={220}
+                      height={220}
+                      className="rounded-xl shadow-xs"
+                    />
+                  </div>
+                ) : null}
               </div>
 
-              <button
-                type="button"
-                onClick={handleConfirmMobilePairing}
-                disabled={isVerifyingPairing}
-                className="w-full bg-sky-600 hover:bg-sky-500 text-white py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-sky-600/20 transition disabled:opacity-50 cursor-pointer"
-              >
-                {isVerifyingPairing ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Memverifikasi koneksi aplikasi...</span>
-                  </>
-                ) : (
-                  <>
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Konfirmasi Sambungkan dari Aplikasi Ponsel</span>
-                  </>
-                )}
-              </button>
+              {pairingId && !pairingExpired && (
+                <div className="w-full max-w-xs space-y-2">
+                  <div
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-mono ${
+                      isDark
+                        ? "bg-[#070F1E] border-white/10 text-slate-300"
+                        : "bg-slate-50 border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    <span className="truncate tracking-wider text-[11px]">
+                      {pairingId}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={handleCopyPairingId}
+                        className="p-1 text-slate-400 hover:text-sky-500 transition rounded-md"
+                        title="Salin ID Pairing"
+                      >
+                        {copied ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={initPairing}
+                        className="p-1 text-slate-400 hover:text-sky-500 transition rounded-md"
+                        title="Refresh QR"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400">
+                    <RefreshCw className="w-3 h-3 text-sky-500 animate-spin" />
+                    <span>Menunggu konfirmasi scan dari aplikasi ponsel...</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -337,23 +483,45 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || !email}
-                    className="w-full bg-sky-600 hover:bg-sky-500 text-white py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-40 cursor-pointer"
+                    className="w-full bg-sky-600 hover:bg-sky-500 text-white py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-40 cursor-pointer shadow-xs"
                   >
-                    {isLoading ? "Mengirim OTP..." : "Kirim 6-Digit Kode OTP"}
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Mengirim Kode OTP...</span>
+                      </>
+                    ) : (
+                      "Kirim 6-Digit Kode OTP"
+                    )}
                   </button>
                 </form>
               ) : (
                 <form onSubmit={handleVerifyEmailOtp} className="space-y-4">
-                  <p className={`text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
-                    Masukkan kode 6 digit yang dikirim ke <strong>{email}</strong>:
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className={`text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                      Kode 6 digit dikirim ke <strong>{email}</strong>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOtpSent(false);
+                        setOtpCode("");
+                        setErrorMessage(null);
+                      }}
+                      className="text-[11px] text-sky-600 hover:underline cursor-pointer"
+                    >
+                      Ganti email
+                    </button>
+                  </div>
+
                   <div>
                     <input
                       type="text"
                       maxLength={6}
                       required
+                      autoFocus
                       value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
                       placeholder="123456"
                       className={`w-full border rounded-xl px-3.5 py-2.5 text-center text-xl font-mono tracking-widest text-sky-600 focus:outline-none focus:border-sky-500 transition ${
                         isDark
@@ -366,9 +534,16 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || otpCode.length < 6}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-40 cursor-pointer"
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-40 cursor-pointer shadow-xs"
                   >
-                    {isLoading ? "Memverifikasi..." : "Verifikasi & Masuk"}
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Memverifikasi...</span>
+                      </>
+                    ) : (
+                      "Verifikasi & Masuk"
+                    )}
                   </button>
                 </form>
               )}

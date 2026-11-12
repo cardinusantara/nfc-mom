@@ -11,14 +11,12 @@ import {
   PairedDevice,
   UserAccount,
 } from "./types";
-import { getProfileByUsername } from "./profiles";
 
 interface AppState {
   // Auth & Account
   account: UserAccount;
   sessionToken: string | null;
   setSession: (token: string, account: UserAccount) => void;
-  loginUser: (username: string) => boolean;
   loginWithGoogle: (profile: { name: string; email: string; avatarUrl?: string }, token: string) => void;
   logout: () => void;
   resetAllData: () => void;
@@ -104,25 +102,6 @@ const CLEAN_CARD_PROFILE: CardProfile = {
     totalTaps: 0,
     contactsSaved: 0,
     momInitiated: 0,
-  },
-};
-
-const DEFAULT_ACCOUNT: UserAccount = {
-  email: "deo@cardi.co.id",
-  name: "Deo Cardi Nathanael",
-  avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&h=160&fit=crop&crop=face",
-  coinsBalance: 245,
-  coinBalance: 245,
-  freemiumGranted: true,
-  subscription: {
-    status: "active",
-    tier: "pro",
-    currentPeriodEnd: "2027-12-31T00:00:00Z",
-  },
-  pairedApp: {
-    deviceId: "dev_iphone_16",
-    deviceModel: "iPhone 16 Pro (Cardi MoM App)",
-    pairedAt: "2026-10-15T08:30:00Z",
   },
 };
 
@@ -273,32 +252,29 @@ const INITIAL_TRANSACTIONS: CoinTransaction[] = [
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      // Auth & Account State (Clean Zero)
-      account: DEFAULT_ACCOUNT,
-      sessionToken: "tok_deo_demo",
-      setSession: (token, account) => set({ sessionToken: token, account }),
-
-      loginUser: (username: string) => {
-        const key = username.toLowerCase().trim();
-        const profile = getProfileByUsername(key);
-        const newAccount: UserAccount = {
-          email: profile.email || `${key}@cardi.co.id`,
-          name: profile.fullName || key,
-          coinsBalance: 50,
-          coinBalance: 50,
-          freemiumGranted: true,
-          subscription: {
-            status: "active",
-            tier: "pro",
-            currentPeriodEnd: "2026-12-31T00:00:00Z",
-          },
+      // Auth & Account State (Clean Zero - Default Logged Out)
+      account: CLEAN_ACCOUNT,
+      sessionToken: null,
+      setSession: (token, account) => {
+        const existingProfile = get().cardProfile;
+        const usernameClean = account.email
+          ? account.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "")
+          : existingProfile.username;
+        const updatedCardProfile: CardProfile = {
+          ...existingProfile,
+          fullName: account.name || existingProfile.fullName || usernameClean,
+          email: account.email || existingProfile.email,
+          username: existingProfile.username || usernameClean,
+          avatarUrl: account.avatarUrl || existingProfile.avatarUrl || "",
         };
         set({
-          account: newAccount,
-          cardProfile: profile,
-          sessionToken: `tok_${key}_active`,
+          sessionToken: token,
+          account: {
+            ...account,
+            coinBalance: account.coinsBalance ?? account.coinBalance ?? 0,
+          },
+          cardProfile: updatedCardProfile,
         });
-        return true;
       },
 
       loginWithGoogle: (profile, token) => {
@@ -311,19 +287,20 @@ export const useAppStore = create<AppState>()(
           coinBalance: 60,
           freemiumGranted: true,
           subscription: {
-            status: "active",
-            tier: "pro",
-            currentPeriodEnd: "2027-12-31T00:00:00Z",
+            status: "none",
+            tier: null,
+            currentPeriodEnd: null,
           },
+          pairedApp: null,
         };
 
         const existingProfile = get().cardProfile;
         const updatedCardProfile: CardProfile = {
           ...existingProfile,
-          fullName: existingProfile.fullName || profile.name,
-          email: existingProfile.email || profile.email,
+          fullName: profile.name || existingProfile.fullName,
+          email: profile.email || existingProfile.email,
           username: existingProfile.username || usernameClean,
-          avatarUrl: existingProfile.avatarUrl || profile.avatarUrl || "",
+          avatarUrl: profile.avatarUrl || existingProfile.avatarUrl || "",
         };
 
         set({
@@ -574,7 +551,7 @@ export const useAppStore = create<AppState>()(
       toggleLocale: () => set((s) => ({ locale: s.locale === "id" ? "en" : "id" })),
     }),
     {
-      name: "cardi_nfc_storage_v1",
+      name: "cardi_nfc_storage_v2",
       storage: createJSONStorage(() => localStorage),
     }
   )

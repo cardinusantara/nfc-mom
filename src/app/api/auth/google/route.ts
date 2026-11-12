@@ -33,7 +33,7 @@ function decodeJwtPayload(token: string): GoogleTokenPayload | null {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { idToken } = body;
+    const { idToken, deviceId } = body;
 
     if (!idToken || typeof idToken !== "string") {
       return NextResponse.json(
@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Decode Google ID Token payload
     const decoded = decodeJwtPayload(idToken);
     if (!decoded || !decoded.email) {
       return NextResponse.json(
@@ -51,52 +50,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Forward to production Cardi Backend on AWS Lambda
-    try {
-      const backendRes = await fetch(`${CARDI_API_URL}/auth/google`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
+    const effectiveDeviceId =
+      typeof deviceId === "string" && deviceId.trim().length > 0
+        ? deviceId.trim()
+        : "web_nfc_portal";
 
-      if (backendRes.ok) {
-        const backendData = await backendRes.json();
-        return NextResponse.json({
-          source: "cardi-backend",
-          sessionToken: backendData.sessionToken,
-          account: backendData.account,
-        });
+    const backendRes = await fetch(`${CARDI_API_URL}/auth/google`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        idToken,
+        deviceId: effectiveDeviceId,
+      }),
+    });
+
+    if (!backendRes.ok) {
+      let errorMessage = `Autentikasi Google gagal (${backendRes.status})`;
+      try {
+        const errJson = await backendRes.json();
+        errorMessage = errJson.message || errJson.error || errorMessage;
+      } catch {
+        // use default message
       }
-    } catch (backendErr) {
-      console.warn("Cardi AWS backend auth/google failed or timed out:", backendErr);
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: backendRes.status }
+      );
     }
 
-    // 3. Fallback: Authenticated directly via verified Google ID Token claims
-    const safeName = decoded.name || decoded.email.split("@")[0];
-    const safeAccount = {
-      id: `acc_${decoded.sub.slice(0, 12)}`,
-      email: decoded.email,
-      name: safeName,
-      avatarUrl: decoded.picture || "",
-      coinsBalance: 60,
-      coinBalance: 60,
-      freemiumGranted: true,
-      subscription: {
-        status: "active" as const,
-        tier: "pro" as const,
-        currentPeriodEnd: "2027-12-31T00:00:00Z",
-      },
-      pairedApp: {
-        deviceId: `web_${decoded.sub.slice(0, 8)}`,
-        deviceModel: "Google Account Session",
-        pairedAt: new Date().toISOString(),
-      },
+    const backendData = await backendRes.json();
+
+    const account = {
+      ...backendData.account,
+      name:
+        decoded.name ||
+        backendData.account?.name ||
+        decoded.email.split("@")[0],
+      avatarUrl: decoded.picture || backendData.account?.avatarUrl || "",
     };
 
     return NextResponse.json({
-      source: "google-verified",
-      sessionToken: `tok_google_${decoded.sub}`,
-      account: safeAccount,
+      sessionToken: backendData.sessionToken,
+      account,
     });
   } catch (error) {
     console.error("Error pada /api/auth/google:", error);
@@ -106,4 +101,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

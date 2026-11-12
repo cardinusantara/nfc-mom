@@ -38,7 +38,7 @@ export class CardiApiClient {
     this.token = token;
   }
 
-  // Request helper with automatic fallback for seamless demo
+  // Request helper with clean error reporting
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -49,90 +49,78 @@ export class CardiApiClient {
       headers["Authorization"] = `Bearer ${this.token}`;
     }
 
-    try {
-      const res = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
-        headers,
-      });
+    const res = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers,
+    });
 
-      if (!res.ok) {
-        throw new Error(`API error: ${res.status}`);
+    if (!res.ok) {
+      let errorMessage = `API error: ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch {
+        // default status message
       }
-
-      return (await res.json()) as T;
-    } catch (err) {
-      console.warn(`[CardiApi] Fallback for ${path}:`, err);
-      throw err;
+      throw new Error(errorMessage);
     }
+
+    return (await res.json()) as T;
   }
 
-  // 1. Send Email OTP
-  async sendEmailCode(email: string): Promise<{ status: "sent"; cooldownSeconds: number }> {
-    try {
-      return await this.request<{ status: "sent"; cooldownSeconds: number }>("/auth/email/send-code", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      });
-    } catch {
-      return { status: "sent", cooldownSeconds: 60 };
-    }
+  // 1. Send Email OTP (ADR 0007)
+  async sendEmailCode(
+    email: string
+  ): Promise<{ status: "sent"; cooldownSeconds: number; expiresInSeconds?: number }> {
+    return await this.request<{
+      status: "sent";
+      cooldownSeconds: number;
+      expiresInSeconds?: number;
+    }>("/auth/email/send-code", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
   }
 
   async requestEmailOtp(email: string) {
     return this.sendEmailCode(email);
   }
 
-  // 2. Verify Email OTP
-  async verifyEmailCode(email: string, code: string): Promise<AuthSession> {
-    try {
-      const res = await this.request<{ sessionToken: string; account: UserAccount }>("/auth/email/verify-code", {
+  // 2. Verify Email OTP (ADR 0007)
+  async verifyEmailCode(
+    email: string,
+    code: string,
+    deviceId = "web_nfc_portal"
+  ): Promise<AuthSession> {
+    const res = await this.request<{ sessionToken: string; account: UserAccount }>(
+      "/auth/email/verify-code",
+      {
         method: "POST",
-        body: JSON.stringify({ email, code, deviceId: "web-client" }),
-      });
-      return { token: res.sessionToken, account: res.account };
-    } catch {
-      return {
-        token: `tok_web_${Date.now()}`,
-        account: {
-          ...MOCK_ACCOUNT,
-          email,
-          coinsBalance: 200,
-          coinBalance: 200,
-        },
-      };
-    }
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          code: code.trim(),
+          deviceId,
+        }),
+      }
+    );
+    return { token: res.sessionToken, account: res.account };
   }
 
-  async verifyEmailOtp(email: string, code: string) {
-    return this.verifyEmailCode(email, code);
+  async verifyEmailOtp(email: string, code: string, deviceId = "web_nfc_portal") {
+    return this.verifyEmailCode(email, code, deviceId);
   }
 
-  // 3. QR Device Pairing (ADR 0002)
+  // 3. QR Device Pairing with Cardi MoM Mobile App (ADR 0002)
   async startPairing(): Promise<PairStartResponse> {
-    try {
-      return await this.request<PairStartResponse>("/auth/pair/start", {
-        method: "POST",
-      });
-    } catch {
-      return {
-        pairingId: `pair_${Math.random().toString(36).substring(2, 9)}`,
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
-      };
-    }
-  }
-
-  async requestPairingCode(): Promise<{ code: string; pairingId: string }> {
-    const pair = await this.startPairing();
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    return { code, pairingId: pair.pairingId };
+    return await this.request<PairStartResponse>("/auth/pair/start", {
+      method: "POST",
+    });
   }
 
   async pollPairing(pairingId: string): Promise<PairPollResponse> {
-    try {
-      return await this.request<PairPollResponse>(`/auth/pair/poll?pairingId=${encodeURIComponent(pairingId)}`);
-    } catch {
-      return { status: "pending" };
-    }
+    return await this.request<PairPollResponse>(
+      `/auth/pair/poll?pairingId=${encodeURIComponent(pairingId.trim())}`
+    );
   }
 
   // 4. S3 Presigned URL & Upload
