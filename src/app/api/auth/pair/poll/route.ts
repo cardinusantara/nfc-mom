@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const CARDI_API_URL =
   process.env.CARDI_API_URL ||
+  process.env.NEXT_PUBLIC_CARDI_API_BASE_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   "https://fuldtvg7vk.execute-api.ap-southeast-1.amazonaws.com";
 
@@ -21,6 +22,7 @@ export async function GET(req: NextRequest) {
       {
         method: "GET",
         headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(8000),
         cache: "no-store",
       }
     );
@@ -36,6 +38,15 @@ export async function GET(req: NextRequest) {
     const data = await res.json();
     return NextResponse.json(data);
   } catch (err) {
+    if (
+      err &&
+      typeof err === "object" &&
+      "digest" in err &&
+      typeof (err as { digest?: unknown }).digest === "string" &&
+      (err as { digest: string }).digest.startsWith("NEXT_")
+    ) {
+      throw err;
+    }
     console.error("Error pada /api/auth/pair/poll:", err);
     return NextResponse.json(
       { error: "Kesalahan server saat polling status pairing" },

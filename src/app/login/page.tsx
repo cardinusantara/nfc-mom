@@ -18,7 +18,7 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react";
-import { useAppStore } from "@/lib/store";
+import { useAppStore, useAuthSession } from "@/lib/store";
 import { cardiApi } from "@/lib/api";
 import { UserAccount, Meeting } from "@/lib/types";
 import { CardiMomLogo } from "@/components/CardiMomLogo";
@@ -26,6 +26,7 @@ import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { hasHydrated, isAuthenticated } = useAuthSession();
   const {
     setSession,
     loginWithGoogle,
@@ -37,6 +38,13 @@ export default function LoginPage() {
   } = useAppStore();
 
   const isDark = theme === "dark";
+
+  // Auto-redirect if already authenticated
+  useEffect(() => {
+    if (hasHydrated && isAuthenticated) {
+      router.replace("/dashboard/card");
+    }
+  }, [hasHydrated, isAuthenticated, router]);
 
   const [authMethod, setAuthMethod] = useState<"qr" | "email">("qr");
 
@@ -56,6 +64,7 @@ export default function LoginPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pairingExpiresAtRef = useRef<number | null>(null);
 
   const stopPolling = useCallback(() => {
     if (pollTimerRef.current) {
@@ -64,7 +73,45 @@ export default function LoginPage() {
     }
   }, []);
 
+  const startPollingLoop = useCallback((pid: string) => {
+    stopPolling();
+    pollTimerRef.current = setInterval(async () => {
+      try {
+        const pollRes = await cardiApi.pollPairing(pid);
+        if (pollRes.status === "confirmed") {
+          stopPolling();
+          cardiApi.setToken(pollRes.sessionToken);
+          setSession(pollRes.sessionToken, pollRes.account);
+
+          // Sync live meetings from mobile app immediately
+          try {
+            const syncData = await cardiApi.syncMeetings();
+            if (syncData.entries) {
+              const liveMeetings = syncData.entries
+                .filter((e) => !e.deleted && e.meeting)
+                .map((e) => (e as { deleted: false; meeting: Meeting }).meeting);
+              setMeetings(liveMeetings);
+            }
+          } catch {
+            // sync will retry on dashboard mount
+          }
+
+          setSuccessMessage("Perangkat aplikasi mobile berhasil tersambung!");
+          setTimeout(() => {
+            router.push("/dashboard/card");
+          }, 400);
+        } else if (pollRes.status === "expired") {
+          stopPolling();
+          setPairingExpired(true);
+        }
+      } catch {
+        // ignore transient poll error
+      }
+    }, 2000);
+  }, [router, setMeetings, setSession, stopPolling]);
+
   const initPairing = useCallback(async () => {
+    if (hasHydrated && isAuthenticated) return;
     stopPolling();
     setIsLoadingPairing(true);
     setPairingExpired(false);
@@ -74,71 +121,73 @@ export default function LoginPage() {
       const res = await cardiApi.startPairing();
       setPairingId(res.pairingId);
 
-      const dataUrl = await QRCode.toDataURL(res.pairingId, {
-        width: 240,
-        margin: 1,
-        color: {
-          dark: "#0B1528",
-          light: "#FFFFFF",
-        },
-      });
+      if (res.expiresAt) {
+        pairingExpiresAtRef.current = new Date(res.expiresAt).getTime();
+      } else {
+        pairingExpiresAtRef.current = Date.now() + 5 * 60 * 1000;
+      }
+
+      let dataUrl: string;
+      try {
+        dataUrl = await QRCode.toDataURL(res.pairingId, {
+          width: 240,
+          margin: 1,
+          color: {
+            dark: "#0B1528",
+            light: "#FFFFFF",
+          },
+        });
+      } catch {
+        const svgString = await QRCode.toString(res.pairingId, {
+          type: "svg",
+          margin: 1,
+          color: {
+            dark: "#0B1528",
+            light: "#FFFFFF",
+          },
+        });
+        dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`;
+      }
       setQrDataUrl(dataUrl);
 
-      // Poll every 2 seconds for confirmation from Cardi MoM mobile app
-      pollTimerRef.current = setInterval(async () => {
-        try {
-          const pollRes = await cardiApi.pollPairing(res.pairingId);
-          if (pollRes.status === "confirmed") {
-            stopPolling();
-            cardiApi.setToken(pollRes.sessionToken);
-            setSession(pollRes.sessionToken, pollRes.account);
-
-            // Sync live meetings from mobile app immediately
-            try {
-              const syncData = await cardiApi.syncMeetings();
-              if (syncData.entries) {
-                const liveMeetings = syncData.entries
-                  .filter((e) => !e.deleted && e.meeting)
-                  .map((e) => (e as { deleted: false; meeting: Meeting }).meeting);
-                setMeetings(liveMeetings);
-              }
-            } catch {
-              // sync will retry on dashboard mount
-            }
-
-            setSuccessMessage("Perangkat aplikasi mobile berhasil tersambung!");
-            setTimeout(() => {
-              router.push("/dashboard/card");
-            }, 400);
-          } else if (pollRes.status === "expired") {
-            stopPolling();
-            setPairingExpired(true);
-          }
-        } catch {
-          // ignore transient poll error
-        }
-      }, 2000);
+      startPollingLoop(res.pairingId);
     } catch (err: unknown) {
       const msg =
         err instanceof Error
           ? err.message
-          : "Gagal membuat sesi pairing aplikasi mobile.";
+          : "Gagal membuat sesi pairing aplikasi mobile. Periksa koneksi internet Anda.";
       setErrorMessage(msg);
     } finally {
       setIsLoadingPairing(false);
     }
-  }, [router, setMeetings, setSession, stopPolling]);
+  }, [hasHydrated, isAuthenticated, startPollingLoop, stopPolling]);
 
   useEffect(() => {
+    if (hasHydrated && isAuthenticated) {
+      stopPolling();
+      return;
+    }
+
     if (authMethod === "qr") {
-      initPairing();
+      const isStillValid =
+        pairingId &&
+        qrDataUrl &&
+        pairingExpiresAtRef.current &&
+        Date.now() < pairingExpiresAtRef.current &&
+        !pairingExpired;
+
+      if (!isStillValid) {
+        initPairing();
+      } else if (!pollTimerRef.current) {
+        startPollingLoop(pairingId);
+      }
     } else {
       stopPolling();
     }
     return () => {
       stopPolling();
     };
-  }, [authMethod, initPairing, stopPolling]);
+  }, [authMethod, hasHydrated, isAuthenticated, initPairing, pairingExpired, pairingId, qrDataUrl, startPollingLoop, stopPolling]);
 
   const handleCopyPairingId = () => {
     if (!pairingId) return;
@@ -250,6 +299,23 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  if (hasHydrated && isAuthenticated) {
+    return (
+      <div
+        className={`min-h-screen flex flex-col items-center justify-center p-6 ${
+          isDark ? "bg-[#090D16] text-white" : "bg-[#F8FAFD] text-slate-900"
+        }`}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            {locale === "id" ? "Mengarahkan ke Dashboard..." : "Redirecting to Dashboard..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -371,7 +437,13 @@ export default function LoginPage() {
           {/* Secondary Methods Tabs */}
           <div className={`flex border-b mb-6 ${isDark ? "border-white/10" : "border-slate-200"}`}>
             <button
-              onClick={() => setAuthMethod("qr")}
+              type="button"
+              onClick={() => {
+                setAuthMethod("qr");
+                if ((!qrDataUrl || pairingExpired) && !isLoadingPairing) {
+                  initPairing();
+                }
+              }}
               className={`flex-1 pb-3 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition ${
                 authMethod === "qr"
                   ? "border-sky-600 text-sky-600 dark:text-sky-400"
@@ -385,6 +457,7 @@ export default function LoginPage() {
             </button>
 
             <button
+              type="button"
               onClick={() => setAuthMethod("email")}
               className={`flex-1 pb-3 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition ${
                 authMethod === "email"
@@ -449,7 +522,22 @@ export default function LoginPage() {
                       className="rounded-xl shadow-xs"
                     />
                   </div>
-                ) : null}
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2.5 p-6 text-center">
+                    <AlertCircle className="w-8 h-8 text-red-500" />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 max-w-[200px]">
+                      {errorMessage || "Gagal memuat Kode QR pairing"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={initPairing}
+                      className="mt-1 bg-sky-600 hover:bg-sky-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Coba Lagi</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {pairingId && !pairingExpired && (

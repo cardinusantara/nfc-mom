@@ -66,7 +66,7 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Left: Brand with Official MoM Logo */}
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center group">
+          <Link href={sessionToken ? "/dashboard/card" : "/"} className="flex items-center group">
             <CardiMomLogo size="sm" colorMode={isDark ? "dark" : "light"} showTagline={false} />
           </Link>
 

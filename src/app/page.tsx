@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CreditCard,
   Mic,
@@ -34,12 +35,27 @@ import {
   Copy,
   HelpCircle,
 } from "lucide-react";
-import { useAppStore } from "@/lib/store";
+import { useAppStore, useAuthSession } from "@/lib/store";
 import { CardiMomLogo, CardiMomIcon } from "@/components/CardiMomLogo";
 
 export default function HomePage() {
+  const router = useRouter();
+  const { hasHydrated, isAuthenticated } = useAuthSession();
   const { theme, toggleTheme, locale, toggleLocale } = useAppStore();
   const isDark = theme === "dark";
+
+  // Auto-redirect if authenticated (allow bypass with ?stay=1 or ?preview=1)
+  useEffect(() => {
+    if (hasHydrated && isAuthenticated) {
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("stay") === "1" || params.get("preview") === "1") {
+          return;
+        }
+      }
+      router.replace("/dashboard/card");
+    }
+  }, [hasHydrated, isAuthenticated, router]);
 
   // 3D Card Interactive Preview
   const [cardSide, setCardSide] = useState<"front" | "back">("front");
@@ -212,24 +228,36 @@ export default function HomePage() {
 
           {/* Action CTAs */}
           <div className="flex items-center gap-2.5">
-            <Link
-              href="/login"
-              className={`text-xs font-bold px-3.5 py-2 rounded-xl transition border ${
-                isDark
-                  ? "bg-white/5 border-white/10 hover:bg-white/10 text-white"
-                  : "bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-800"
-              }`}
-            >
-              Masuk Akun
-            </Link>
+            {isAuthenticated ? (
+              <Link
+                href="/dashboard/card"
+                className="bg-gradient-to-r from-[#0258A4] to-[#1E4FFF] hover:from-[#01417A] hover:to-[#0258A4] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition flex items-center gap-1.5"
+              >
+                <span>Masuk ke Dashboard</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className={`text-xs font-bold px-3.5 py-2 rounded-xl transition border ${
+                    isDark
+                      ? "bg-white/5 border-white/10 hover:bg-white/10 text-white"
+                      : "bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-800"
+                  }`}
+                >
+                  Masuk Akun
+                </Link>
 
-            <Link
-              href="/activate"
-              className="bg-gradient-to-r from-[#0258A4] to-[#1E4FFF] hover:from-[#01417A] hover:to-[#0258A4] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition flex items-center gap-1.5"
-            >
-              <span>Aktivasi Kartu</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+                <Link
+                  href="/activate"
+                  className="bg-gradient-to-r from-[#0258A4] to-[#1E4FFF] hover:from-[#01417A] hover:to-[#0258A4] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition flex items-center gap-1.5"
+                >
+                  <span>Aktivasi Kartu</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -272,26 +300,52 @@ export default function HomePage() {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-3.5 mb-8 w-full sm:w-auto">
-                <Link
-                  href="/activate"
-                  className="w-full sm:w-auto bg-gradient-to-r from-[#0258A4] via-[#1E4FFF] to-[#00C2D1] hover:brightness-110 text-white px-6 py-3.5 rounded-xl font-bold text-sm shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2 transition"
-                >
-                  <Radio className="w-4 h-4 text-cyan-200 animate-pulse" />
-                  <span>Aktivasi Kartu Fisik</span>
-                </Link>
+                {isAuthenticated ? (
+                  <>
+                    <Link
+                      href="/dashboard/card"
+                      className="w-full sm:w-auto bg-gradient-to-r from-[#0258A4] via-[#1E4FFF] to-[#00C2D1] hover:brightness-110 text-white px-6 py-3.5 rounded-xl font-bold text-sm shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2 transition"
+                    >
+                      <span>Masuk ke Dashboard</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
 
-                <Link
-                  href="/deo"
-                  target="_blank"
-                  className={`w-full sm:w-auto border px-6 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-xs ${
-                    isDark
-                      ? "bg-white/5 hover:bg-white/10 border-white/15 text-white"
-                      : "bg-white hover:bg-slate-50 border-[#E6ECF7] text-[#0A1633]"
-                  }`}
-                >
-                  <CreditCard className="w-4 h-4 text-[#0258A4]" />
-                  <span>Coba Demo Profil Deo</span>
-                </Link>
+                    <Link
+                      href="/activate"
+                      className={`w-full sm:w-auto border px-6 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-xs ${
+                        isDark
+                          ? "bg-white/5 hover:bg-white/10 border-white/15 text-white"
+                          : "bg-white hover:bg-slate-50 border-[#E6ECF7] text-[#0A1633]"
+                      }`}
+                    >
+                      <Radio className="w-4 h-4 text-[#0258A4]" />
+                      <span>Aktivasi Kartu Fisik</span>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/activate"
+                      className="w-full sm:w-auto bg-gradient-to-r from-[#0258A4] via-[#1E4FFF] to-[#00C2D1] hover:brightness-110 text-white px-6 py-3.5 rounded-xl font-bold text-sm shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2 transition"
+                    >
+                      <Radio className="w-4 h-4 text-cyan-200 animate-pulse" />
+                      <span>Aktivasi Kartu Fisik</span>
+                    </Link>
+
+                    <Link
+                      href="/deo"
+                      target="_blank"
+                      className={`w-full sm:w-auto border px-6 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-xs ${
+                        isDark
+                          ? "bg-white/5 hover:bg-white/10 border-white/15 text-white"
+                          : "bg-white hover:bg-slate-50 border-[#E6ECF7] text-[#0A1633]"
+                      }`}
+                    >
+                      <CreditCard className="w-4 h-4 text-[#0258A4]" />
+                      <span>Coba Demo Profil Deo</span>
+                    </Link>
+                  </>
+                )}
               </div>
 
               {/* Trust Badges */}
@@ -787,10 +841,10 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
                 </div>
 
                 <Link
-                  href="/login"
+                  href={isAuthenticated ? "/dashboard/calendar" : "/login"}
                   className="bg-sky-600 hover:bg-sky-500 text-white px-5 py-3 rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-lg shadow-sky-600/25 transition cursor-pointer"
                 >
-                  <span>Masuk dengan Akun Google</span>
+                  <span>{isAuthenticated ? "Buka Kalender Dashboard" : "Masuk dengan Akun Google"}</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -1321,7 +1375,7 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
               </h4>
               <ul className="space-y-1.5 opacity-80">
                 <li><Link href="/activate" className="hover:text-sky-600 transition">Aktivasi Kartu Baru</Link></li>
-                <li><Link href="/login" className="hover:text-sky-600 transition">Login Akun Google</Link></li>
+                <li><Link href={isAuthenticated ? "/dashboard/card" : "/login"} className="hover:text-sky-600 transition">{isAuthenticated ? "Dashboard Akun" : "Login Akun Google"}</Link></li>
                 <li><Link href="/deo" className="hover:text-sky-600 transition">Demo Hasil Tap Kartu</Link></li>
                 <li><a href="https://wa.me/6281289895646" target="_blank" rel="noreferrer" className="hover:text-sky-600 transition">Konsultasi via WhatsApp</a></li>
               </ul>

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import {
@@ -399,3 +400,53 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+export function useHasHydrated(): boolean {
+  const [hasHydrated, setHasHydrated] = useState(false);
+
+  useEffect(() => {
+    if (useAppStore.persist.hasHydrated()) {
+      setHasHydrated(true);
+      return;
+    }
+    const unsub = useAppStore.persist.onFinishHydration(() => {
+      setHasHydrated(true);
+    });
+    return () => unsub();
+  }, []);
+
+  return hasHydrated;
+}
+
+export interface AuthSessionState {
+  hasHydrated: boolean;
+  isAuthenticated: boolean;
+  sessionToken: string | null;
+  account: UserAccount | null;
+  logout: () => void;
+}
+
+export function useAuthSession(): AuthSessionState {
+  const hasHydrated = useHasHydrated();
+  const sessionToken = useAppStore((state) => state.sessionToken);
+  const account = useAppStore((state) => state.account);
+  const logout = useAppStore((state) => state.logout);
+
+  const isAuthenticated = Boolean(
+    hasHydrated &&
+      sessionToken &&
+      sessionToken.trim().length > 0 &&
+      account &&
+      account.email &&
+      account.email.trim().length > 0
+  );
+
+  return {
+    hasHydrated,
+    isAuthenticated,
+    sessionToken: isAuthenticated ? sessionToken : null,
+    account: isAuthenticated ? account : null,
+    logout,
+  };
+}
+
