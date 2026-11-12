@@ -1,6 +1,9 @@
 // Cardi Ecosystem Type Definitions
 // Aligned with @cardi/shared backend contracts and NFC Business Card requirements
 
+export type AppTheme = "dark" | "light";
+export type AppLocale = "id" | "en";
+
 export type SubscriptionTier = "free" | "pro" | "team";
 
 export interface AccountSubscriptionSummary {
@@ -98,6 +101,22 @@ export interface Meeting {
   momReadAt: string | null;
   updatedAt: string;
   createdAt: string;
+  audioUrl?: string | null;
+}
+
+// Calendar Event Definition
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm or HH:mm - HH:mm
+  attendees: string;
+  location: string;
+  status: "upcoming" | "completed" | "cancelled";
+  source: "NFC Tap" | "MoM Action Item" | "Manual" | "Google Calendar";
+  googleCalendarUrl?: string;
+  momId?: string;
+  notes?: string;
 }
 
 export interface SyncResponse {

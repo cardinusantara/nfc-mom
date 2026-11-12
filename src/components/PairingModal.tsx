@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Smartphone,
   QrCode,
@@ -9,7 +9,6 @@ import {
   Copy,
   RefreshCw,
   X,
-  ShieldCheck,
   AlertCircle,
   Sparkles,
 } from "lucide-react";
@@ -24,12 +23,14 @@ interface PairingModalProps {
 export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
   const { account, setPairedApp, updateCoinBalance } = useAppStore();
   const [tab, setTab] = useState<"qr" | "email">("qr");
-  
-  // QR / Code pairing state
-  const [pairingCode, setPairingCode] = useState("892-415");
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
+
+  // Real QR Pairing State
+  const [pairingId, setPairingId] = useState<string>("");
+  const [isLoadingPairing, setIsLoadingPairing] = useState(false);
+  const [pairingExpired, setPairingExpired] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Email OTP state
   const [emailInput, setEmailInput] = useState(account.email || "");
@@ -37,66 +38,116 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
   const [otpSent, setOtpSent] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
 
+  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  const initPairing = useCallback(async () => {
+    stopPolling();
+    setIsLoadingPairing(true);
+    setPairingExpired(false);
+    setErrorMessage(null);
+
+    try {
+      const res = await cardiApi.startPairing();
+      setPairingId(res.pairingId);
+
+      // Start polling loop every 2.5s
+      pollTimerRef.current = setInterval(async () => {
+        try {
+          const pollRes = await cardiApi.pollPairing(res.pairingId);
+          if (pollRes.status === "confirmed") {
+            stopPolling();
+            cardiApi.setToken(pollRes.sessionToken);
+            setPairedApp({
+              deviceId: pollRes.account.pairedApp?.deviceId || "dev_mobile",
+              deviceModel: pollRes.account.pairedApp?.deviceModel || "Cardi MoM Mobile App",
+              pairedAt: new Date().toISOString(),
+            });
+            const coins = pollRes.account.coinsBalance ?? pollRes.account.coinBalance ?? 0;
+            updateCoinBalance(coins);
+            setSuccessMessage("Aplikasi Cardi MoM berhasil terhubung! Koin disinkronkan.");
+            setTimeout(() => {
+              setSuccessMessage(null);
+              onClose();
+            }, 1800);
+          } else if (pollRes.status === "expired") {
+            stopPolling();
+            setPairingExpired(true);
+          }
+        } catch {
+          // ignore transient poll errors
+        }
+      }, 2500);
+    } catch {
+      setErrorMessage("Gagal menghubungkan ke server pairing.");
+    } finally {
+      setIsLoadingPairing(false);
+    }
+  }, [onClose, setPairedApp, stopPolling, updateCoinBalance]);
+
+  useEffect(() => {
+    if (isOpen && !account.pairedApp && tab === "qr") {
+      initPairing();
+    } else {
+      stopPolling();
+    }
+    return () => stopPolling();
+  }, [isOpen, account.pairedApp, tab, initPairing, stopPolling]);
+
   if (!isOpen) return null;
 
-  const handleRefreshCode = async () => {
-    setIsRefreshing(true);
-    try {
-      const res = await cardiApi.requestPairingCode();
-      setPairingCode(res.code.slice(0, 3) + "-" + res.code.slice(3));
-    } catch {
-      // fallback
-      const rand = Math.floor(100000 + Math.random() * 900000).toString();
-      setPairingCode(rand.slice(0, 3) + "-" + rand.slice(3));
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  const handleSimulateDevicePairing = () => {
-    setIsVerifying(true);
-    setTimeout(() => {
-      setIsVerifying(false);
-      setPairedApp({
-        deviceId: "dev_samsung_s24",
-        deviceModel: "Samsung Galaxy S24 Ultra (Cardi MoM App)",
-        pairedAt: new Date().toISOString(),
-      });
-      updateCoinBalance(200); // synced with mobile wallet
-      setSuccessMessage("Aplikasi MoM Mobile berhasil terhubung! Koin disinkronkan.");
-      setTimeout(() => {
-        setSuccessMessage(null);
-        onClose();
-      }, 2000);
-    }, 1500);
+  const handleCopyPairingId = () => {
+    if (!pairingId) return;
+    navigator.clipboard.writeText(pairingId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const handleSendEmailOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailInput) return;
     setEmailLoading(true);
-    await cardiApi.requestEmailOtp(emailInput);
-    setEmailLoading(false);
-    setOtpSent(true);
+    setErrorMessage(null);
+    try {
+      await cardiApi.requestEmailOtp(emailInput);
+      setOtpSent(true);
+    } catch {
+      setErrorMessage("Gagal mengirim kode OTP ke email.");
+    } finally {
+      setEmailLoading(false);
+    }
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpInput) return;
     setEmailLoading(true);
+    setErrorMessage(null);
     try {
       const res = await cardiApi.verifyEmailOtp(emailInput, otpInput);
+      if (res.token) {
+        cardiApi.setToken(res.token);
+      }
       setPairedApp({
         deviceId: "dev_email_sync",
         deviceModel: `Akun Terverifikasi (${emailInput})`,
         pairedAt: new Date().toISOString(),
       });
-      updateCoinBalance(res.account.coinBalance || 250);
+      const coins = res.account.coinsBalance ?? res.account.coinBalance ?? 200;
+      updateCoinBalance(coins);
       setSuccessMessage("Akun email MoM tersambung dengan sukses!");
       setTimeout(() => {
         setSuccessMessage(null);
         onClose();
-      }, 2000);
+      }, 1800);
+    } catch {
+      setErrorMessage("Kode OTP tidak valid atau telah kedaluwarsa.");
     } finally {
       setEmailLoading(false);
     }
@@ -106,6 +157,10 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
     setPairedApp(null);
   };
 
+  const qrImageUrl = pairingId
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pairingId)}`
+    : "";
+
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-[#18181b] border border-white/15 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150 text-white">
@@ -113,6 +168,7 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-white/50 hover:text-white transition"
+          aria-label="Tutup"
         >
           <X className="w-5 h-5" />
         </button>
@@ -164,7 +220,7 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
               }`}
             >
               <QrCode className="w-4 h-4" />
-              <span>Kode Pairing / QR</span>
+              <span>Scan QR Aplikasi</span>
             </button>
             <button
               onClick={() => setTab("email")}
@@ -180,51 +236,72 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
           </div>
         )}
 
-        {/* Tab 1: QR & 6-Digit Pairing Code */}
+        {/* Tab 1: Live QR Scanner via Mobile App */}
         {!account.pairedApp && tab === "qr" && (
           <div className="flex flex-col items-center text-center">
             <p className="text-xs text-white/70 mb-4 leading-relaxed">
-              Buka aplikasi <strong>Cardi MoM</strong> di Android / iPhone Anda, pilih menu <strong>Pengaturan &rarr; Tautkan Web / NFC</strong>, lalu masukkan kode berikut:
+              Buka aplikasi <strong>Cardi MoM</strong> di Android / iOS, buka menu scanner, lalu pindai kode QR di bawah:
             </p>
 
-            {/* 6-Digit Code Display */}
-            <div className="bg-[#242429] border border-white/15 px-6 py-3 rounded-2xl flex items-center gap-3 mb-4 shadow-inner">
-              <span className="text-2xl font-mono font-black tracking-widest text-[#3b7cfa]">
-                {pairingCode}
-              </span>
-              <button
-                onClick={handleRefreshCode}
-                disabled={isRefreshing}
-                className="text-white/40 hover:text-white transition p-1"
-                title="Perbarui kode baru"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-              </button>
+            {/* QR Code Container */}
+            <div className="relative bg-white p-3 rounded-2xl shadow-xl flex items-center justify-center mb-3">
+              {isLoadingPairing ? (
+                <div className="w-[200px] h-[200px] flex flex-col items-center justify-center text-black/50 text-xs">
+                  <RefreshCw className="w-6 h-6 animate-spin mb-2 text-[#3b7cfa]" />
+                  <span>Membuat sesi pairing...</span>
+                </div>
+              ) : pairingExpired ? (
+                <div className="w-[200px] h-[200px] flex flex-col items-center justify-center text-black/70 text-xs p-4 text-center">
+                  <AlertCircle className="w-7 h-7 text-red-500 mb-2" />
+                  <span className="font-semibold text-red-600 mb-2">QR Kedaluwarsa</span>
+                  <button
+                    onClick={initPairing}
+                    className="bg-[#3b7cfa] text-white px-3 py-1.5 rounded-lg text-xs font-medium"
+                  >
+                    Muat Ulang
+                  </button>
+                </div>
+              ) : qrImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={qrImageUrl}
+                  alt="Scan QR Pairing Code"
+                  width={200}
+                  height={200}
+                  className="rounded-lg"
+                />
+              ) : null}
             </div>
 
-            {/* Action buttons */}
-            <button
-              onClick={handleSimulateDevicePairing}
-              disabled={isVerifying}
-              className="w-full bg-[#3b7cfa] hover:bg-[#2563eb] text-white py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition"
-            >
-              {isVerifying ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Memverifikasi koneksi aplikasi ponsel...</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Konfirmasi Pairing dari Aplikasi Ponsel</span>
-                </>
-              )}
-            </button>
+            {/* Pairing ID and Copy Button */}
+            {pairingId && !pairingExpired && (
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[11px] font-mono text-white/50 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+                  ID: {pairingId}
+                </span>
+                <button
+                  onClick={handleCopyPairingId}
+                  className="text-white/50 hover:text-white p-1"
+                  title="Salin ID Pairing"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+                {copied && <span className="text-[10px] text-[#10b981]">Disalin</span>}
+              </div>
+            )}
 
-            <div className="mt-4 p-3 bg-white/5 border border-white/10 rounded-xl text-left w-full flex items-start gap-2.5">
+            {/* Status Indicator */}
+            {!pairingExpired && (
+              <div className="flex items-center gap-2 text-xs text-white/50 mb-3">
+                <RefreshCw className="w-3 h-3 animate-spin text-[#3b7cfa]" />
+                <span>Menunggu scan dari aplikasi ponsel...</span>
+              </div>
+            )}
+
+            <div className="p-3 bg-white/5 border border-white/10 rounded-xl text-left w-full flex items-start gap-2.5">
               <Sparkles className="w-4 h-4 text-[#f59e0b] flex-shrink-0 mt-0.5" />
               <p className="text-[11px] text-white/60 leading-normal">
-                Setelah tersambung, saldo koin Anda akan digabungkan otomatis. Anda dapat merekam meeting dari kartu NFC dan membukanya di aplikasi mobile, atau sebaliknya.
+                Setelah tersambung, saldo koin Anda akan digabungkan otomatis. Notula dari kartu NFC dan aplikasi mobile tersinkron langsung secara real-time.
               </p>
             </div>
           </div>
@@ -294,6 +371,14 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
                 </button>
               </form>
             )}
+          </div>
+        )}
+
+        {/* Error Alert */}
+        {errorMessage && (
+          <div className="mt-4 p-3 bg-red-500/20 border border-red-500/40 rounded-xl text-xs text-red-400 font-medium flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{errorMessage}</span>
           </div>
         )}
 

@@ -5,136 +5,27 @@ import {
   PairStartResponse,
   SyncResponse,
   UserAccount,
+  CardProfile,
 } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://aiagent.cardi.co.id";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://fuldtvg7vk.execute-api.ap-southeast-1.amazonaws.com";
 
-// Mock Fallback Data for offline development
+// Clean initial state for new user
 const MOCK_ACCOUNT: UserAccount = {
-  email: "deo@cardi.co.id",
-  name: "Deo Cardi Nathanael",
-  coinsBalance: 240,
-  coinBalance: 240,
-  freemiumGranted: true,
+  email: "",
+  name: "",
+  coinsBalance: 0,
+  coinBalance: 0,
+  freemiumGranted: false,
   subscription: {
-    status: "active",
-    tier: "pro",
-    currentPeriodEnd: "2026-12-31T00:00:00Z",
+    status: "none",
+    tier: null,
+    currentPeriodEnd: null,
   },
-  pairedApp: {
-    deviceId: "dev_samsung_s24",
-    deviceModel: "Samsung Galaxy S24 Ultra (Cardi MoM App)",
-    pairedAt: "2026-10-20T10:00:00Z",
-  },
+  pairedApp: null,
 };
 
-export const MOCK_MEETINGS: Meeting[] = [
-  {
-    id: "mtg_01",
-    title: "Kickoff Integrasi NFC Card & MoM App",
-    titleIsDefault: false,
-    date: "2026-10-22",
-    startTime: "14:00",
-    durationMinutes: 45,
-    attendees: "Deo Cardi, Hendra, Maya",
-    location: "Google Meet",
-    status: "ready",
-    failedStage: null,
-    failureReason: null,
-    mom: {
-      shortSummary: "Penyelarasan arsitektur NFC Business Card dengan Cardi MoM backend dan mobile app.",
-      executiveSummary: "Tim menyepakati penggunaan sistem QR Pairing dari mobile app untuk login instan web. Alur rekaman langsung di browser didukung dengan visualizer waveform dan upload langsung ke S3.",
-      discussionPoints: [
-        {
-          topic: "Autentikasi Lintas Platform",
-          detail: "Memanfaatkan OTP Email 6 digit dan QR Device Pairing agar pengguna tidak perlu input kata sandi.",
-          sourceMs: [12000, 45000],
-        },
-        {
-          topic: "Trigger NFC Card",
-          detail: "Tap kartu NFC langsung menyajikan profil digital serta CTA langsung membuka sesi rekaman MoM.",
-          sourceMs: [78000],
-        },
-      ],
-      decisions: [
-        { text: "QR pairing disamakan dengan standar ADR 0002 mobile app.", sourceMs: [130000] },
-        { text: "Koin bersama digunakan untuk kuota MoM dan tap analytics kartu.", sourceMs: [180000] },
-      ],
-      actionItems: [
-        {
-          item: "Finalisasi UI perekam meeting dengan wave bar bergerak",
-          owner: "Frontend Lead",
-          dueDate: "2026-10-24",
-          dueDateText: "lusa sore",
-          sourceMs: [210000],
-        },
-        {
-          item: "Sinkronisasi vCard generation untuk kontak .vcf",
-          owner: "Backend Team",
-          dueDate: "2026-10-25",
-          dueDateText: "Jumat ini",
-          sourceMs: [250000],
-        },
-      ],
-      openIssues: [
-        { text: "Optimasi latensi audio upload pada jaringan 4G seluler.", sourceMs: [] },
-      ],
-      nextSteps: [
-        { text: "Uji coba tap NFC menggunakan prototipe fisik kartu NTAG215.", sourceMs: [] },
-      ],
-      model: "gpt-4o-transcribe-v2",
-      promptVersion: "1.2.0",
-    },
-    momReadAt: "2026-10-22T15:00:00Z",
-    updatedAt: "2026-10-22T14:48:00Z",
-    createdAt: "2026-10-22T13:55:00Z",
-  },
-  {
-    id: "mtg_02",
-    title: "Review Partnership PT Mandiri Tech",
-    titleIsDefault: false,
-    date: "2026-10-21",
-    startTime: "10:30",
-    durationMinutes: 30,
-    attendees: "Deo Cardi, Budi Hartono (Mandiri Tech)",
-    location: "Kopi Kenangan Senopati",
-    status: "ready",
-    failedStage: null,
-    failureReason: null,
-    mom: {
-      shortSummary: "Diskusi implementasi 50 unit NFC Card untuk divisi Business Development.",
-      executiveSummary: "Budi tertarik mengadopsi kartu bisnis Cardi untuk tim BD mereka karena integrasi langsung dengan Minutes of Meeting.",
-      discussionPoints: [
-        {
-          topic: "Paket Kartu & Kuota Koin",
-          detail: "Kebutuhan 500 koin per bulan per kartu untuk 15 meeting bulanan.",
-          sourceMs: [5000],
-        },
-      ],
-      decisions: [
-        { text: "Kirim penawaran paket Corporate Pro sebelum 24 Oktober.", sourceMs: [45000] },
-      ],
-      actionItems: [
-        {
-          item: "Kirimkan proposal MoU dan invoice sampel kartu",
-          owner: "Deo Cardi",
-          dueDate: "2026-10-23",
-          dueDateText: "besok lusa",
-          sourceMs: [80000],
-        },
-      ],
-      openIssues: [],
-      nextSteps: [
-        { text: "Follow-up via WhatsApp pada hari Kamis.", sourceMs: [] },
-      ],
-      model: "gpt-4o-transcribe-v2",
-      promptVersion: "1.2.0",
-    },
-    momReadAt: "2026-10-21T11:15:00Z",
-    updatedAt: "2026-10-21T11:05:00Z",
-    createdAt: "2026-10-21T10:30:00Z",
-  },
-];
+export const MOCK_MEETINGS: Meeting[] = [];
 
 export class CardiApiClient {
   private token: string | null = null;
@@ -334,6 +225,66 @@ export class CardiApiClient {
       };
       return newMtg;
     }
+  }
+
+  // 7. NFC Smart Card & Public Profile Endpoints
+  async fetchPublicProfile(username: string): Promise<CardProfile | null> {
+    try {
+      const res = await this.request<{ profile: CardProfile }>(
+        `/nfc/profile/${encodeURIComponent(username.toLowerCase())}`
+      );
+      return res.profile;
+    } catch (err) {
+      console.warn(`[CardiApi] Profile not found or error for ${username}:`, err);
+      return null;
+    }
+  }
+
+  async recordCardTap(username: string): Promise<{ success: boolean; totalTaps: number }> {
+    try {
+      return await this.request<{ success: boolean; totalTaps: number }>(
+        `/nfc/profile/${encodeURIComponent(username.toLowerCase())}/tap`,
+        { method: "POST" }
+      );
+    } catch {
+      return { success: false, totalTaps: 0 };
+    }
+  }
+
+  async activateCard(data: {
+    tagId: string;
+    username: string;
+    email: string;
+    fullName: string;
+    headline?: string;
+    company?: string;
+    phone?: string;
+    website?: string;
+    location?: string;
+    bio?: string;
+    bundleTier?: "none" | "card_only" | "quick" | "bulk" | "custom";
+    cardDesign?: "black-gold" | "royal-blue" | "silver-minimal";
+  }): Promise<{
+    success: boolean;
+    username: string;
+    tagId: string;
+    email: string;
+    coinsCredited: number;
+    totalCoinsBalance: number;
+    profile: CardProfile;
+  }> {
+    return await this.request(`/nfc/activate`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateCardProfile(profile: Partial<CardProfile>): Promise<CardProfile> {
+    const res = await this.request<{ profile: CardProfile }>(`/nfc/profile`, {
+      method: "PUT",
+      body: JSON.stringify(profile),
+    });
+    return res.profile;
   }
 }
 

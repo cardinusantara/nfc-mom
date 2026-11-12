@@ -5,43 +5,61 @@ import Link from "next/link";
 import {
   CreditCard,
   Mic,
-  Coins,
-  Smartphone,
+  Calendar,
   Sparkles,
   ArrowRight,
   Radio,
-  CheckCircle,
+  CheckCircle2,
   ExternalLink,
   ShieldCheck,
-  Calendar,
-  MessageSquare,
-  FileText,
-  Play,
-  Share2,
-  Users,
-  Clock,
+  Smartphone,
   ChevronRight,
+  ChevronDown,
   Download,
   Check,
-  Headphones,
-  Award,
-  Zap,
   Rotate3d,
   Layers,
-  Send,
+  CalendarCheck,
+  Cpu,
+  Building,
+  Users,
+  MessageCircle,
+  FileText,
+  Clock,
+  Play,
+  Pause,
+  Share2,
+  Zap,
+  Coins,
+  Copy,
+  HelpCircle,
 } from "lucide-react";
+import { useAppStore } from "@/lib/store";
+import { CardiMomLogo, CardiMomIcon } from "@/components/CardiMomLogo";
 
 export default function HomePage() {
-  const [activeHeroTab, setActiveHeroTab] = useState<"card" | "mom">("card");
-  const [activeSimTab, setActiveSimTab] = useState<"trans" | "summary" | "actions">("summary");
-  const [isSimulatingTap, setIsSimulatingTap] = useState(false);
-  const [tapStep, setTapStep] = useState<"idle" | "tapping" | "success">("idle");
+  const { theme, toggleTheme, locale, toggleLocale } = useAppStore();
+  const isDark = theme === "dark";
 
-  // Hero Card 3D Tilt Effect
+  // 3D Card Interactive Preview
+  const [cardSide, setCardSide] = useState<"front" | "back">("front");
+  const [cardFinish, setCardFinish] = useState<"onyx" | "cyan" | "titanium">("onyx");
   const cardRef = useRef<HTMLDivElement>(null);
   const [rotX, setRotX] = useState(0);
   const [rotY, setRotY] = useState(0);
-  const [sheen, setSheen] = useState({ x: 50, y: 50 });
+
+  // Live Tap Simulator
+  const [isSimulatingTap, setIsSimulatingTap] = useState(false);
+  const [tapStatus, setTapStatus] = useState<"idle" | "tapping" | "done">("idle");
+
+  // Interactive Live MoM Demo Player
+  const [demoRunning, setDemoRunning] = useState(false);
+  const [demoStep, setDemoStep] = useState<1 | 2 | 3 | 4>(4);
+  const [demoTab, setDemoTab] = useState<"summary" | "decisions" | "actions" | "whatsapp">("summary");
+  const [demoCopied, setDemoCopied] = useState(false);
+
+  // FAQ Accordion State
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
@@ -53,7 +71,6 @@ export default function HomePage() {
 
     setRotX(-((y - centerY) / centerY) * 14);
     setRotY(((x - centerX) / centerX) * 16);
-    setSheen({ x: (x / rect.width) * 100, y: (y / rect.height) * 100 });
   };
 
   const handleCardMouseLeave = () => {
@@ -62,89 +79,155 @@ export default function HomePage() {
   };
 
   const triggerTapSimulation = () => {
-    setTapStep("tapping");
+    setTapStatus("tapping");
     setIsSimulatingTap(true);
     setTimeout(() => {
-      setTapStep("success");
+      setTapStatus("done");
       setTimeout(() => {
-        setTapStep("idle");
+        setTapStatus("idle");
         setIsSimulatingTap(false);
-      }, 4000);
+      }, 3500);
+    }, 700);
+  };
+
+  const runDemoPipeline = () => {
+    setDemoRunning(true);
+    setDemoStep(1);
+    setTimeout(() => {
+      setDemoStep(2);
+      setTimeout(() => {
+        setDemoStep(3);
+        setTimeout(() => {
+          setDemoStep(4);
+          setDemoRunning(false);
+        }, 800);
+      }, 900);
     }, 900);
   };
 
-  return (
-    <div className="min-h-screen bg-[#F8FAFD] text-[#0A1633] flex flex-col font-sans selection:bg-[#1E4FFF] selection:text-white">
-      
-      {/* 00. Top Ecosystem Announcement Bar */}
-      <div className="bg-[#070D1E] text-white/70 text-[11px] py-1.5 border-b border-white/10 hidden sm:block">
-        <div className="max-w-[1240px] mx-auto px-6 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00C2D1] animate-pulse"></span>
-            <span className="text-[#64B5F6] font-bold">Cardi Agent AI Ecosystem</span>
-            <span className="text-white/30">•</span>
-            <span className="text-white/80">Solusi AI Meeting Intelligence &amp; Smart NFC Pertama di Indonesia</span>
-          </div>
-          <div className="flex items-center gap-4 text-xs font-semibold">
-            <Link href="https://aiagent.cardi.co.id" target="_blank" className="hover:text-white transition flex items-center gap-1">
-              Cardi Agent <ExternalLink className="w-3 h-3 text-white/50" />
-            </Link>
-            <span className="text-white/30">|</span>
-            <Link href="https://aiagent.cardi.co.id/mom" target="_blank" className="text-white hover:text-[#00C2D1] transition flex items-center gap-1">
-              Cardi MoM AI
-            </Link>
-            <span className="text-white/30">|</span>
-            <span className="text-[#00C2D1] font-bold">Cardi Smart Card NFC</span>
-          </div>
-        </div>
-      </div>
+  const copyWhatsAppSample = () => {
+    const sample = `*NOTULA RESMI CARDI MOM: RAPAT KEMITRAAN EKSEKUTIF*\n📅 Tanggal: Hari Ini | ⏱️ Durasi: 24 Menit\n👥 Peserta: Deo Cardi Nathanael (CEO), Reza Pratama (Managing Director)\n\n*RINGKASAN EKSEKUTIF:*\nPertemuan menyepakati implementasi 50 unit Cardi Smart NFC Card untuk jajaran eksekutif, integrasi AI MoM dengan WhatsApp corporate, dan uji coba pilot 14 hari.\n\n*KEPUTUSAN RAPAT:*\n• Mengadopsi Cardi Smart NFC Card sebagai standar ID bisnis eksekutif.\n• Menghubungkan seluruh meeting komersial dengan notula AI otomatis.\n\n*ACTION ITEMS:*\n[ ] Kirim final invoice paket tim 50 kartu NFC (PIC: Tim Cardi)\n[ ] Sinkronisasi kalender tim ke Google Workspace (PIC: Reza Pratama)\n\n_Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`;
+    navigator.clipboard.writeText(sample);
+    setDemoCopied(true);
+    setTimeout(() => setDemoCopied(false), 2000);
+  };
 
+  const finishDetails = {
+    onyx: {
+      name: "Onyx Matte Gold",
+      bg: "linear-gradient(135deg, #131722 0%, #090c13 50%, #030407 100%)",
+      accent: "text-amber-400",
+      border: "border-amber-400/30",
+    },
+    cyan: {
+      name: "Royal Cyan Blue",
+      bg: "linear-gradient(135deg, #03396c 0%, #011f4b 50%, #00122e 100%)",
+      accent: "text-sky-400",
+      border: "border-sky-400/40",
+    },
+    titanium: {
+      name: "Titanium Slate",
+      bg: "linear-gradient(135deg, #272e3f 0%, #171d2b 50%, #0e121b 100%)",
+      accent: "text-slate-200",
+      border: "border-slate-400/30",
+    },
+  }[cardFinish];
+
+  const faqs = [
+    {
+      q: "Apakah lawan bicara perlu menginstal aplikasi untuk membaca kartu nama NFC?",
+      a: "Sama sekali tidak. Kartu nama pintar Cardi Smart NFC menggunakan standar web terbuka ISO/IEC 14443-A. Begitu kartu ditempelkan ke bodi iPhone atau smartphone Android klien, peramban (browser) otomatis terbuka menampilkan profil profesional Anda, tombol simpan kontak .vcf, tautan WhatsApp, dan jadwal pertemuan tanpa instalasi aplikasi apapun.",
+    },
+    {
+      q: "Bagaimana cara kerja notula rapat AI MoM?",
+      a: "Anda dapat merekam suara rapat tatap muka langsung dari browser web dashboard Cardi maupun melalui aplikasi mobile Cardi MoM di ponsel Anda. AI canggih berbasis model suara generasi terbaru akan mentranskripsi percakapan ke bahasa Indonesia formal, merangkum poin esensial, mengekstrak keputusan penting, dan memetakan tugas (action items) beserta PIC dan deadline secara otomatis.",
+    },
+    {
+      q: "Berapa kebutuhan koin untuk setiap rapat?",
+      a: "Satu sesi rapat membutuhkan rata-rata 5-10 koin tergantung durasi percakapan. Setiap paket bundling kartu fisik sudah dilengkapi kuota koin awal, dan saldo koin tidak memiliki masa kedaluwarsa (hangus) sehingga dapat digunakan kapan pun.",
+    },
+    {
+      q: "Bagaimana dengan integrasi Google Calendar dan WhatsApp?",
+      a: "Seluruh action items yang dihasilkan oleh AI MoM dapat langsung disinkronkan ke akun Google Calendar kedua belah pihak hanya dengan 1-klik. Selain itu, Anda dapat membagikan ringkasan notula resmi yang telah diformat rapi dengan bullet points langsung ke grup WhatsApp tim atau klien.",
+    },
+    {
+      q: "Apakah kartu fisik NFC aman dan tahan lama?",
+      a: "Sangat aman. Kartu ditenagai chip NXP NTAG215 orisinil dengan kapasitas memori 504 Bytes tanpa baterai. Kartu tahan air, tahan panas, dan memiliki daya tahan lebih dari 100.000 kali tap. Di bagian belakang kartu juga dilengkapi kode QR laser-engraved sebagai cadangan untuk smartphone yang belum memiliki sensor NFC aktif.",
+    },
+  ];
+
+  return (
+    <div
+      className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
+        isDark
+          ? "bg-[#090D16] text-white selection:bg-sky-500 selection:text-white"
+          : "bg-[#F8FAFD] text-[#0A1633] selection:bg-sky-500 selection:text-white"
+      }`}
+    >
       {/* 01. Sticky Header / Navbar */}
-      <header className="sticky top-2 z-50 max-w-[1240px] mx-auto px-4 w-full">
-        <div className="bg-white/90 backdrop-blur-xl border border-[#E6ECF7] rounded-2xl shadow-[0_10px_35px_rgba(10,22,51,0.06)] px-5 py-3 flex items-center justify-between">
+      <header className="sticky top-2 z-50 max-w-6xl mx-auto px-4 w-full">
+        <div
+          className={`backdrop-blur-xl border rounded-2xl px-5 py-3 flex items-center justify-between shadow-lg transition-colors ${
+            isDark
+              ? "bg-[#0E1626]/90 border-white/10 shadow-black/40"
+              : "bg-white/95 border-[#E6ECF7] shadow-[0_10px_30px_rgba(10,22,51,0.05)]"
+          }`}
+        >
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0258A4] via-[#1E4FFF] to-[#00C2D1] flex items-center justify-center text-white font-black text-lg shadow-md shadow-[#1E4FFF]/25 group-hover:scale-105 transition">
-                C
-              </div>
-              <div className="flex flex-col">
-                <span className="text-base font-black tracking-tight text-[#0A1633] leading-none">
-                  Cardi <span className="text-[#1E4FFF]">Smart NFC</span>
-                </span>
-                <span className="text-[10px] text-[#6B7A9C] font-semibold tracking-wider uppercase mt-0.5">
-                  &amp; AI MoM Intelligence
-                </span>
-              </div>
+            <Link href="/" className="flex items-center">
+              <CardiMomLogo
+                size="sm"
+                colorMode={isDark ? "dark" : "light"}
+                showTagline={false}
+              />
             </Link>
           </div>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-7 text-[13px] font-semibold text-[#3D4B6B]">
-            <a href="#fitur-nfc" className="hover:text-[#1E4FFF] transition">Fitur Kartu</a>
-            <a href="#cara-kerja" className="hover:text-[#1E4FFF] transition">Alur Rapat AI</a>
-            <a href="#hardware-card" className="hover:text-[#1E4FFF] transition flex items-center gap-1.5">
-              <span>Spesifikasi Chip</span>
-              <span className="bg-[#1E4FFF]/10 text-[#1E4FFF] text-[10px] px-1.5 py-0.5 rounded font-mono font-bold">NTAG215</span>
+          <nav
+            className={`hidden md:flex items-center gap-6 text-[13px] font-semibold ${
+              isDark ? "text-slate-300" : "text-[#3D4B6B]"
+            }`}
+          >
+            <a href="#fitur" className="hover:text-sky-600 transition">
+              Fitur Kartu
             </a>
-            <a href="#mobile-app" className="hover:text-[#1E4FFF] transition">Aplikasi Mobile</a>
-            <a href="#harga" className="hover:text-[#1E4FFF] transition">Skema Koin</a>
+            <a href="#alur-kerja" className="hover:text-sky-600 transition">
+              Alur Notula AI
+            </a>
+            <a href="#demo-mom" className="hover:text-sky-600 transition flex items-center gap-1 text-[#0258A4] dark:text-[#38bdf8]">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Demo AI</span>
+            </a>
+            <a href="#google-calendar" className="hover:text-sky-600 transition">
+              Integrasi Google
+            </a>
+            <a href="#harga" className="hover:text-sky-600 transition">
+              Paket Harga
+            </a>
+            <a href="#faq" className="hover:text-sky-600 transition">
+              FAQ
+            </a>
           </nav>
 
           {/* Action CTAs */}
           <div className="flex items-center gap-2.5">
             <Link
-              href="/deo"
-              target="_blank"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-[#1E4FFF] bg-[#EEF4FF] hover:bg-[#1E4FFF]/15 px-3.5 py-2 rounded-xl transition btn-press"
+              href="/login"
+              className={`text-xs font-bold px-3.5 py-2 rounded-xl transition border ${
+                isDark
+                  ? "bg-white/5 border-white/10 hover:bg-white/10 text-white"
+                  : "bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-800"
+              }`}
             >
-              <Radio className="w-3.5 h-3.5 text-[#1E4FFF] animate-pulse" />
-              <span>Simulasi Tap Kartu</span>
+              Masuk Akun
             </Link>
+
             <Link
-              href="/dashboard/card"
-              className="bg-[#1E4FFF] hover:bg-[#153DCC] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-[#1E4FFF]/25 transition flex items-center gap-1.5 btn-press"
+              href="/activate"
+              className="bg-gradient-to-r from-[#0258A4] to-[#1E4FFF] hover:from-[#01417A] hover:to-[#0258A4] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition flex items-center gap-1.5"
             >
-              <span>Dashboard Kartu</span>
+              <span>Aktivasi Kartu</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -152,745 +235,1113 @@ export default function HomePage() {
       </header>
 
       {/* 02. HERO SECTION */}
-      <section className="relative grid-bg pt-10 pb-16 md:pt-16 md:pb-24 overflow-hidden ambient-glow">
-        <div className="max-w-[1240px] mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+      <section className="relative pt-10 pb-16 md:pt-16 md:pb-24 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(#1E4FFF_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.03] dark:opacity-[0.06] pointer-events-none" />
+
+        <div className="max-w-6xl mx-auto px-6 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
             
-            {/* Left Copy Column */}
+            {/* Left Column: Value Prop */}
             <div className="lg:col-span-6 flex flex-col items-start text-left">
-              <div className="eyebrow-badge mb-4">
+              <div
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-[11px] font-bold tracking-wide uppercase mb-4 ${
+                  isDark
+                    ? "bg-sky-500/10 border-sky-500/30 text-sky-400"
+                    : "bg-[#EEF4FF] border-[#1E4FFF]/25 text-[#1E4FFF]"
+                }`}
+              >
                 <Sparkles className="w-3.5 h-3.5 text-[#1E4FFF]" />
-                <span>NFC SMART CARD + AI MINUTES OF MEETING</span>
+                <span>AI MEETING INTELLIGENCE + SMART NFC</span>
               </div>
 
-              <h1 className="text-3xl sm:text-5xl lg:text-[45px] font-black tracking-tight text-[#0A1633] leading-[1.12] mb-5">
-                Sekali Tap Kartu, <br />
-                <span className="text-[#1E4FFF]">Simpan Kontak</span> &amp; Rekam Notula Rapat AI.
+              <h1 className="text-3xl sm:text-5xl lg:text-[44px] font-black tracking-tight leading-[1.15] mb-4 text-[#0A1633] dark:text-white">
+                Satu Tap Kartu, <br />
+                <span className="text-[#0258A4] dark:text-[#38bdf8]">
+                  Simpan Kontak
+                </span>{" "}
+                &amp; Rekam Notula Rapat AI.
               </h1>
 
-              <p className="text-[#3D4B6B] text-base leading-relaxed mb-6 max-w-xl">
-                Tinggalkan kartu nama kertas kuno. Cardi menggabungkan kartu bisnis NFC fisik kelas eksekutif dengan kecerdasan AI MoM. Simpan kontak (.vcf) instan, rekam suara rapat, dan bagikan notula resmi ke WhatsApp tanpa catat manual.
+              <p
+                className={`text-base leading-relaxed mb-7 max-w-xl ${
+                  isDark ? "text-slate-300" : "text-[#3D4B6B]"
+                }`}
+              >
+                Tinggalkan kartu nama kertas kuno. Cardi menggabungkan kartu bisnis NFC fisik kelas eksekutif dengan kecerdasan AI MoM. Simpan kontak (.vcf) instan, sinkronisasi jadwal Google Calendar, rekam percakapan rapat, dan bagikan notula resmi ke WhatsApp tanpa catat manual.
               </p>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3.5 mb-7 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center gap-3.5 mb-8 w-full sm:w-auto">
                 <Link
-                  href="/deo"
-                  target="_blank"
-                  className="w-full sm:w-auto bg-[#1E4FFF] hover:bg-[#153DCC] text-white px-6 py-3.5 rounded-xl font-bold text-sm shadow-xl shadow-[#1E4FFF]/25 flex items-center justify-center gap-2 transition btn-press"
+                  href="/activate"
+                  className="w-full sm:w-auto bg-gradient-to-r from-[#0258A4] via-[#1E4FFF] to-[#00C2D1] hover:brightness-110 text-white px-6 py-3.5 rounded-xl font-bold text-sm shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2 transition"
                 >
-                  <Radio className="w-4 h-4 text-[#00C2D1]" />
-                  <span>Coba Demo Tap Profil Deo</span>
+                  <Radio className="w-4 h-4 text-cyan-200 animate-pulse" />
+                  <span>Aktivasi Kartu Fisik</span>
                 </Link>
 
                 <Link
-                  href="/dashboard/card"
-                  className="w-full sm:w-auto bg-white hover:bg-[#F5F8FE] border border-[#E6ECF7] text-[#0A1633] px-6 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-sm btn-press"
+                  href="/deo"
+                  target="_blank"
+                  className={`w-full sm:w-auto border px-6 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-xs ${
+                    isDark
+                      ? "bg-white/5 hover:bg-white/10 border-white/15 text-white"
+                      : "bg-white hover:bg-slate-50 border-[#E6ECF7] text-[#0A1633]"
+                  }`}
                 >
-                  <CreditCard className="w-4 h-4 text-[#1E4FFF]" />
-                  <span>Kelola Kartu Anda</span>
+                  <CreditCard className="w-4 h-4 text-[#0258A4]" />
+                  <span>Coba Demo Profil Deo</span>
                 </Link>
               </div>
 
               {/* Trust Badges */}
-              <div className="pt-4 border-t border-[#E6ECF7] w-full flex flex-wrap items-center gap-4 text-xs font-semibold text-[#6B7A9C]">
+              <div
+                className={`pt-5 border-t w-full flex flex-wrap items-center gap-5 text-xs font-semibold ${
+                  isDark ? "border-white/10 text-slate-400" : "border-[#E6ECF7] text-[#6B7A9C]"
+                }`}
+              >
                 <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-[#10B981]" />
-                  <span>NTAG215 (504 Bytes)</span>
+                  <ShieldCheck className="w-4 h-4 text-[#00A87E]" />
+                  <span>Chip NXP NTAG215 (504 Bytes)</span>
                 </div>
-                <span>•</span>
                 <div className="flex items-center gap-1.5">
-                  <Zap className="w-4 h-4 text-[#1E4FFF]" />
-                  <span>Tap Tanpa Instal Aplikasi</span>
+                  <CalendarCheck className="w-4 h-4 text-[#1E4FFF]" />
+                  <span>Google Calendar Sync</span>
                 </div>
-                <span>•</span>
                 <div className="flex items-center gap-1.5">
                   <Smartphone className="w-4 h-4 text-[#00C2D1]" />
-                  <span>iOS &amp; Android Ready</span>
+                  <span>iOS &amp; Android Tanpa Aplikasi</span>
                 </div>
               </div>
             </div>
 
-            {/* Right Interactive Showcase Column */}
+            {/* Right Column: 3D Physical Card Showcase */}
             <div className="lg:col-span-6 flex flex-col items-center">
-              
-              {/* Tab Selector between Card & MoM AI Engine */}
-              <div className="bg-white/80 backdrop-blur-md border border-[#E6ECF7] p-1.5 rounded-2xl flex gap-1 mb-4 shadow-sm w-full max-w-md">
+              {/* Card Controls */}
+              <div className="flex items-center justify-between w-full max-w-md mb-3 px-1">
+                <div className="flex items-center gap-1">
+                  {(["onyx", "cyan", "titanium"] as const).map((finish) => (
+                    <button
+                      key={finish}
+                      onClick={() => setCardFinish(finish)}
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition cursor-pointer ${
+                        cardFinish === finish
+                          ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/40"
+                          : isDark
+                          ? "bg-white/5 border-white/10 text-slate-400"
+                          : "bg-white border-slate-200 text-slate-600 shadow-2xs"
+                      }`}
+                    >
+                      {finish === "onyx" ? "Onyx Gold" : finish === "cyan" ? "Royal Cyan" : "Titanium"}
+                    </button>
+                  ))}
+                </div>
+
                 <button
-                  onClick={() => setActiveHeroTab("card")}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${
-                    activeHeroTab === "card"
-                      ? "bg-[#1E4FFF] text-white shadow-md shadow-[#1E4FFF]/20"
-                      : "text-[#6B7A9C] hover:text-[#0A1633]"
+                  onClick={() => setCardSide(cardSide === "front" ? "back" : "front")}
+                  className={`text-[11px] font-bold px-3 py-1 rounded-lg border flex items-center gap-1.5 transition cursor-pointer ${
+                    isDark
+                      ? "bg-white/5 border-white/15 text-slate-300"
+                      : "bg-white border-slate-200 text-slate-700 shadow-2xs hover:bg-slate-50"
                   }`}
                 >
-                  <CreditCard className="w-4 h-4" />
-                  <span>Smart NFC Card</span>
-                </button>
-                <button
-                  onClick={() => setActiveHeroTab("mom")}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${
-                    activeHeroTab === "mom"
-                      ? "bg-[#1E4FFF] text-white shadow-md shadow-[#1E4FFF]/20"
-                      : "text-[#6B7A9C] hover:text-[#0A1633]"
-                  }`}
-                >
-                  <Mic className="w-4 h-4" />
-                  <span>AI MoM Engine</span>
+                  <Rotate3d className="w-3.5 h-3.5 text-sky-500" />
+                  <span>Putar Kartu</span>
                 </button>
               </div>
 
-              {/* SHOWCASE VIEW 1: SMART NFC CARD WITH TAP SIMULATOR */}
-              {activeHeroTab === "card" && (
-                <div className="w-full max-w-md flex flex-col items-center">
-                  <div className="card-perspective w-full">
-                    <div
-                      ref={cardRef}
-                      onMouseMove={handleCardMouseMove}
-                      onMouseLeave={handleCardMouseLeave}
-                      style={{
-                        transform: `rotateX(${rotX}deg) rotateY(${rotY}deg)`,
-                      }}
-                      className="card-3d relative w-full aspect-[1.586/1] rounded-[24px] bg-gradient-to-br from-[#0F172A] via-[#0A1633] to-[#040817] p-6 text-white border border-white/20 shadow-[0_25px_60px_-15px_rgba(10,22,51,0.5)] flex flex-col justify-between overflow-hidden cursor-pointer select-none group"
-                    >
-                      {/* Holographic light sheen */}
-                      <div
-                        className="absolute inset-0 pointer-events-none transition-opacity duration-300 opacity-60"
-                        style={{
-                          background: `radial-gradient(circle at ${sheen.x}% ${sheen.y}%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 60%)`,
-                        }}
-                      />
+              {/* 3D Card Mockup */}
+              <div
+                ref={cardRef}
+                onMouseMove={handleCardMouseMove}
+                onMouseLeave={handleCardMouseLeave}
+                style={{
+                  transform: `perspective(1000px) rotateX(${rotX}deg) rotateY(${rotY}deg)`,
+                  transition: "transform 0.1s ease-out",
+                }}
+                className={`w-full max-w-md aspect-[1.586/1] rounded-[24px] p-6 relative overflow-hidden shadow-2xl border ${finishDetails.border} select-none flex flex-col justify-between`}
+              >
+                {/* Metallic Background */}
+                <div
+                  className="absolute inset-0 z-0 pointer-events-none"
+                  style={{ background: finishDetails.bg }}
+                />
 
-                      {/* Ambient glowing orb */}
-                      <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#1E4FFF]/30 rounded-full blur-3xl pointer-events-none" />
+                {/* Specular sheen reflection */}
+                <div
+                  className="absolute inset-0 z-0 pointer-events-none opacity-30 bg-gradient-to-tr from-transparent via-white/15 to-transparent"
+                  style={{
+                    transform: `translateX(${rotY * 4}%) translateY(${rotX * 4}%)`,
+                  }}
+                />
 
-                      {/* Card Top */}
-                      <div className="flex justify-between items-center z-10">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-xl bg-[#1E4FFF] flex items-center justify-center font-black text-sm text-white shadow-md shadow-[#1E4FFF]/30">
-                            C
-                          </div>
-                          <div>
-                            <span className="font-extrabold tracking-tight text-sm text-white flex items-center gap-1">
-                              CARDI <span className="text-[#00C2D1]">SMART</span>
-                            </span>
-                            <span className="text-[9px] text-white/50 tracking-wider font-mono block">
-                              NFC + AI MoM Connected
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="w-8 h-8 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
-                          <Radio className="w-4 h-4 text-[#00C2D1] animate-pulse" />
-                        </div>
+                {cardSide === "front" ? (
+                  /* FRONT FACE */
+                  <>
+                    <div className="flex items-center justify-between relative z-10">
+                      <div className="flex items-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="/logos/mom/logo-mom-card.png"
+                          alt="Cardi Agent MoM"
+                          className="h-6 sm:h-7 object-contain drop-shadow-xs"
+                        />
                       </div>
+                      <div className="flex items-center gap-1.5 text-white/80">
+                        <Radio className="w-4 h-4 text-cyan-300 animate-pulse" />
+                        <span className="text-[10px] font-mono tracking-widest font-bold">
+                          NFC
+                        </span>
+                      </div>
+                    </div>
 
-                      {/* Microchip EMV */}
-                      <div className="w-12 h-9 rounded-lg bg-gradient-to-tr from-[#F3D079] via-[#ECC062] to-[#B38728] border border-white/40 shadow-md flex items-center justify-around px-1 z-10">
-                        <div className="w-[1px] h-full bg-black/25" />
-                        <div className="w-3.5 h-3.5 rounded-full border border-black/35 flex items-center justify-center">
+                    {/* Chip & Holder Info */}
+                    <div className="relative z-10 my-auto py-1">
+                      <div className="w-12 h-9 rounded-lg bg-gradient-to-tr from-amber-200 via-amber-400 to-amber-600 border border-white/40 shadow-inner flex items-center justify-around px-1 mb-3">
+                        <div className="w-[1px] h-full bg-black/20" />
+                        <div className="w-3.5 h-3.5 rounded-full border border-black/30 flex items-center justify-center">
                           <div className="w-1.5 h-1.5 rounded-full bg-black/20" />
                         </div>
-                        <div className="w-[1px] h-full bg-black/25" />
+                        <div className="w-[1px] h-full bg-black/20" />
                       </div>
 
-                      {/* Card Bottom: Holder Name */}
-                      <div className="flex justify-between items-end z-10 pt-2 border-t border-white/10">
-                        <div>
-                          <div className="text-[9.5px] uppercase font-mono tracking-widest text-[#93C5FD]">
-                            EXECUTIVE PROFILE
-                          </div>
-                          <div className="text-base font-black tracking-wide text-white">
-                            Deo Cardi Nathanael
-                          </div>
-                          <div className="text-[11px] text-white/70">
-                            Founder &amp; CEO, Cardi Nusantara
-                          </div>
-                        </div>
-
-                        <div className="text-[10px] font-mono bg-[#10B981]/20 border border-[#10B981]/40 text-[#10B981] font-bold px-2 py-0.5 rounded-full">
-                          ACTIVE NFC
-                        </div>
-                      </div>
+                      <h3 className="text-lg font-black text-white tracking-tight leading-tight">
+                        Deo Cardi Nathanael
+                      </h3>
+                      <p className="text-xs text-cyan-300 font-semibold mt-0.5">
+                        Chief Executive Officer
+                      </p>
+                      <p className="text-[11px] text-white/70">
+                        Cardi Nusantara AI
+                      </p>
                     </div>
-                  </div>
 
-                  {/* Interactive Tap Simulator Control */}
-                  <div className="w-full mt-4 bg-white border border-[#E6ECF7] rounded-2xl p-4 shadow-sm flex flex-col items-center text-center">
-                    <button
-                      onClick={triggerTapSimulation}
-                      disabled={isSimulatingTap}
-                      className="w-full bg-gradient-to-r from-[#1E4FFF] to-[#0258A4] hover:from-[#153DCC] hover:to-[#01417A] text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-[#1E4FFF]/25 transition btn-press"
-                    >
-                      <Radio className="w-4 h-4 text-[#00C2D1]" />
-                      <span>{isSimulatingTap ? "Menempelkan Kartu ke Ponsel..." : "Uji Tap Kartu ke HP (Simulasi)"}</span>
-                    </button>
-
-                    {tapStep === "tapping" && (
-                      <div className="mt-3 flex items-center gap-2 text-xs text-[#1E4FFF] font-semibold animate-pulse">
-                        <Radio className="w-4 h-4 animate-spin" />
-                        <span>Membaca sinyal frekuensi 13.56 MHz NTAG215...</span>
-                      </div>
-                    )}
-
-                    {tapStep === "success" && (
-                      <div className="mt-3 bg-[#EEF4FF] border border-[#1E4FFF]/30 rounded-xl p-3 w-full text-left animate-in fade-in duration-200">
-                        <div className="flex items-center gap-2 text-xs font-bold text-[#1E4FFF] mb-1">
-                          <CheckCircle className="w-4 h-4 text-[#10B981]" />
-                          <span>Tap Berhasil! Notifikasi Ponsel Terbuka:</span>
-                        </div>
-                        <p className="text-xs text-[#0A1633] font-semibold">
-                          &quot;Buka Profil Deo Cardi &amp; Unduh Kontak (.vcf)&quot;
-                        </p>
-                        <p className="text-[11px] text-[#3D4B6B] mt-0.5">
-                          Tamu rapat langsung dapat menyimpan kontak atau menekan tombol rekam notula MoM.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* SHOWCASE VIEW 2: CARDI MoM AI MEETING SIMULATOR */}
-              {activeHeroTab === "mom" && (
-                <div className="w-full max-w-md bg-white border border-[#E6ECF7] rounded-2xl shadow-xl overflow-hidden animate-in fade-in duration-200">
-                  {/* MoM Header */}
-                  <div className="bg-[#0A1633] text-white p-4 flex items-center justify-between border-b border-white/10">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-[#1E4FFF] flex items-center justify-center text-white">
-                        <Mic className="w-4 h-4 animate-pulse" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <span>Rapat Kemitraan Strategis</span>
-                          <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-                        </div>
-                        <p className="text-[10.5px] text-white/60">Tatap Muka • NFC Tap Active • 32 Menit</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] bg-[#EF4444] text-white font-black px-2 py-0.5 rounded-full uppercase">
-                      Live AI
-                    </span>
-                  </div>
-
-                  {/* MoM Tabs */}
-                  <div className="bg-[#F5F8FE] border-b border-[#E6ECF7] px-4 flex gap-4 text-xs font-bold text-[#6B7A9C]">
-                    <button
-                      onClick={() => setActiveSimTab("summary")}
-                      className={`py-2.5 border-b-2 transition ${
-                        activeSimTab === "summary"
-                          ? "border-[#1E4FFF] text-[#1E4FFF]"
-                          : "border-transparent hover:text-[#0A1633]"
-                      }`}
-                    >
-                      Ringkasan Notula
-                    </button>
-                    <button
-                      onClick={() => setActiveSimTab("actions")}
-                      className={`py-2.5 border-b-2 transition ${
-                        activeSimTab === "actions"
-                          ? "border-[#1E4FFF] text-[#1E4FFF]"
-                          : "border-transparent hover:text-[#0A1633]"
-                      }`}
-                    >
-                      Action Items
-                    </button>
-                    <button
-                      onClick={() => setActiveSimTab("trans")}
-                      className={`py-2.5 border-b-2 transition ${
-                        activeSimTab === "trans"
-                          ? "border-[#1E4FFF] text-[#1E4FFF]"
-                          : "border-transparent hover:text-[#0A1633]"
-                      }`}
-                    >
-                      Transkripsi
-                    </button>
-                  </div>
-
-                  {/* MoM Body */}
-                  <div className="p-4 text-xs text-[#0A1633]">
-                    {activeSimTab === "summary" && (
-                      <div className="space-y-3">
-                        <div className="p-3 bg-[#EEF4FF] rounded-xl border border-[#1E4FFF]/20">
-                          <strong className="text-[#1E4FFF] block mb-1">Executive Summary:</strong>
-                          <p className="text-[#3D4B6B] leading-relaxed">
-                            Kedua belah pihak menyepakati integrasi 50 unit Smart NFC Card untuk jajaran direksi dan divisi sales. Transkripsi suara rapat otomatis langsung memotong saldo koin bersama.
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-between text-[11px] text-[#6B7A9C]">
-                          <span>Model AI: Whisper + GPT-4o</span>
-                          <span className="text-[#10B981] font-semibold">100% Notula Valid</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {activeSimTab === "actions" && (
-                      <div className="space-y-2">
-                        <div className="p-2.5 bg-[#F8FAFD] border border-[#E6ECF7] rounded-xl flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4 text-[#10B981]" />
-                            <span className="font-semibold">Kirim MoU &amp; Invoice sampel kartu</span>
-                          </div>
-                          <span className="text-[10px] bg-[#EEF4FF] text-[#1E4FFF] font-bold px-2 py-0.5 rounded">Deo Cardi</span>
-                        </div>
-                        <div className="p-2.5 bg-[#F8FAFD] border border-[#E6ECF7] rounded-xl flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4 text-[#10B981]" />
-                            <span className="font-semibold">Jadwalkan demo teknis Google Meet</span>
-                          </div>
-                          <span className="text-[10px] bg-white border border-[#E6ECF7] text-[#6B7A9C] font-bold px-2 py-0.5 rounded">Tamu</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {activeSimTab === "trans" && (
-                      <div className="space-y-2 text-[#3D4B6B]">
-                        <p><strong>Deo:</strong> &quot;Begitu kartu ditap di meja rapat, rekaman audio bisa langsung dimulai dari HP.&quot;</p>
-                        <p><strong>Partner:</strong> &quot;Sangat efisien. Jadi kita tidak perlu lagi menunjuk satu orang sekretaris khusus.&quot;</p>
-                      </div>
-                    )}
-
-                    {/* Animated Waveform Equalizer */}
-                    <div className="mt-4 pt-3 border-t border-[#E6ECF7] flex items-center justify-between">
-                      <div className="flex items-center gap-1 h-5">
-                        {[12, 22, 34, 18, 28, 14, 26, 32, 16, 24, 10, 20].map((h, i) => (
-                          <span
-                            key={i}
-                            className="w-1 bg-[#1E4FFF] rounded-full animate-wave-bar"
-                            style={{ animationDelay: `${i * 0.08}s` }}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-[10px] text-[#1E4FFF] font-mono font-bold flex items-center gap-1">
-                        <Radio className="w-3 h-3" /> Live Audio Buffer
+                    <div className="flex items-end justify-between relative z-10 pt-2 border-t border-white/10 text-[10px]">
+                      <span className="font-mono text-white/60">
+                        cardi.co.id/deo
+                      </span>
+                      <span className="text-amber-300 font-bold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        <span>AI MoM Enabled</span>
                       </span>
                     </div>
-                  </div>
-                </div>
-              )}
+                  </>
+                ) : (
+                  /* BACK FACE */
+                  <>
+                    <div className="flex items-center justify-between relative z-10">
+                      <span className="text-[10px] font-mono tracking-widest text-white/50">
+                        ISO/IEC 14443-A
+                      </span>
+                      <span className="text-[10px] font-mono font-bold text-cyan-300 bg-white/10 px-2 py-0.5 rounded">
+                        NXP NTAG215 • 504B
+                      </span>
+                    </div>
+
+                    <div className="relative z-10 flex items-center justify-center my-auto">
+                      <div className="w-24 h-24 rounded-2xl bg-white p-2.5 shadow-2xl flex items-center justify-center">
+                        <svg className="w-full h-full" viewBox="0 0 24 24" fill="none">
+                          <rect width="24" height="24" fill="white" />
+                          <path
+                            fill="#0A1633"
+                            d="M2 2h7v7H2V2zm2 2v3h3V4H4zm11-2h7v7h-7V2zm2 2v3h3V4h-3zM2 15h7v7H2v-7zm2 2v3h3v-3H4zm7-13h2v2h-2V4zm0 4h2v2h-2V8zm4 7h2v2h-2v-2zm-4 4h2v2h-2v-2zm4 0h2v2h-2v-2zm2-4h2v2h-2v-2zm-6-3h2v2h-2v-2zm0 4h2v2h-2v-2zm6-4h2v2h-2v-2zm0 6h2v2h-2v-2z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between relative z-10 pt-2 border-t border-white/10 text-[10px] text-white/60 font-mono">
+                      <span>TAP TO CONNECT WITH PHONE</span>
+                      <span className="text-emerald-400 font-bold">READY</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Tap Simulation Trigger */}
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  onClick={triggerTapSimulation}
+                  disabled={isSimulatingTap}
+                  className="bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-600 dark:text-sky-400 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer"
+                >
+                  <Radio className="w-3.5 h-3.5 animate-pulse" />
+                  <span>
+                    {tapStatus === "tapping"
+                      ? "Mendekatkan Kartu ke HP..."
+                      : tapStatus === "done"
+                      ? "Tap Berhasil! Profil Terbuka"
+                      : "Coba Simulasi Tap Kartu"}
+                  </span>
+                </button>
+              </div>
             </div>
 
           </div>
         </div>
       </section>
 
-      {/* 03. PROOF & METRICS BAR */}
-      <section className="bg-white border-y border-[#E6ECF7] py-8">
-        <div className="max-w-[1240px] mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            <div className="flex flex-col items-center">
-              <span className="text-3xl lg:text-4xl font-black text-[#1E4FFF] tracking-tight">0.2 dtk</span>
-              <span className="text-xs text-[#6B7A9C] font-semibold mt-1">Kecepatan Tap &amp; Baca NTAG215</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-3xl lg:text-4xl font-black text-[#0A1633] tracking-tight">99.4%</span>
-              <span className="text-xs text-[#6B7A9C] font-semibold mt-1">Akurasi Transkripsi Dialek Indonesia</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-3xl lg:text-4xl font-black text-[#00C2D1] tracking-tight">10.000+</span>
-              <span className="text-xs text-[#6B7A9C] font-semibold mt-1">Menit Rapat Diproses Bulanan</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-3xl lg:text-4xl font-black text-[#10B981] tracking-tight">100%</span>
-              <span className="text-xs text-[#6B7A9C] font-semibold mt-1">Bebas Aplikasi Pihak Ketiga Bagi Tamu</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 04. SEAMLESS 4-STEP WORKFLOW */}
-      <section id="cara-kerja" className="py-20 bg-[#F8FAFD] border-b border-[#E6ECF7]">
-        <div className="max-w-[1240px] mx-auto px-6">
+      {/* 03. 4-STEP WORKFLOW (ALUR KERJA NOTULA AI) */}
+      <section id="alur-kerja" className="py-16 md:py-24 border-t border-b border-[#E6ECF7] dark:border-white/10 relative">
+        <div className="max-w-6xl mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <div className="eyebrow-badge mb-3">
-              <Sparkles className="w-3.5 h-3.5 text-[#1E4FFF]" />
-              <span>WORKFLOW OTOMATIS</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 text-xs font-bold mb-3 uppercase tracking-wider">
+              <span>Alur Kerja Rapat AI</span>
             </div>
-            <h2 className="text-2xl sm:text-4xl font-black text-[#0A1633] tracking-tight">
-              Dari Pertukaran Kartu <br />
-              <span className="text-[#1E4FFF]">Hingga Notula Rapat Siap Eksekusi</span>
+            <h2 className="text-2xl sm:text-4xl font-black tracking-tight mb-3">
+              Dari Sekali Tap Kartu, Sampai Action Items Terdistribusi
             </h2>
-            <p className="text-[#3D4B6B] text-sm sm:text-base mt-3">
-              Satu ekosistem mulus yang menghubungkan perkenalan fisik dengan teknologi kecerdasan buatan.
+            <p className={`text-sm leading-relaxed ${isDark ? "text-slate-400" : "text-[#3D4B6B]"}`}>
+              Tanpa perlu aplikasi tambahan bagi lawan bicara. Semua proses berjalan instan, teratur, dan otomatis terhubung ke ekosistem kerja tim Anda.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-            {/* Step 1 */}
-            <div className="bg-white p-6 rounded-2xl border border-[#E6ECF7] shadow-sm flex flex-col justify-between hover:border-[#1E4FFF]/40 transition group">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-[#EEF4FF] text-[#1E4FFF] font-black text-sm flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                  01
-                </div>
-                <h3 className="font-bold text-base text-[#0A1633] mb-1.5">Tap Kartu NFC ke HP</h3>
-                <p className="text-xs text-[#3D4B6B] leading-relaxed">
-                  Tempelkan kartu ke punggung HP rekan bisnis. Browser langsung terbuka otomatis menampilkan profil eksekutif Anda.
-                </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className={`p-6 rounded-3xl border transition ${isDark ? "bg-[#0E1A30]/70 border-white/10" : "bg-white border-[#E6ECF7] shadow-xs"}`}>
+              <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-600 flex items-center justify-center font-bold text-sm mb-4">
+                01
               </div>
-              <div className="mt-4 pt-3 border-t border-[#E6ECF7] text-[11px] font-semibold text-[#1E4FFF] flex items-center gap-1">
-                <span>NTAG215 Contactless</span>
-                <ChevronRight className="w-3.5 h-3.5" />
+              <h3 className="text-base font-bold mb-2">Tap Kartu ke Ponsel</h3>
+              <p className={`text-xs leading-relaxed ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                Dekatkan kartu fisik ke bodi iPhone atau Android. Browser otomatis membuka profil eksekutif Anda tanpa perlu mengetik nomor manual.
+              </p>
+            </div>
+
+            <div className={`p-6 rounded-3xl border transition ${isDark ? "bg-[#0E1A30]/70 border-white/10" : "bg-white border-[#E6ECF7] shadow-xs"}`}>
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-sm mb-4">
+                02
+              </div>
+              <h3 className="text-base font-bold mb-2">Simpan Kontak vCard</h3>
+              <p className={`text-xs leading-relaxed ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                Lawan bicara mengklik &ldquo;Simpan Kontak&rdquo; dan seluruh nomor telepon, email, WhatsApp, dan perusahaan Anda langsung tersimpan di kontak HP.
+              </p>
+            </div>
+
+            <div className={`p-6 rounded-3xl border transition ${isDark ? "bg-[#0E1A30]/70 border-white/10" : "bg-white border-[#E6ECF7] shadow-xs"}`}>
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold text-sm mb-4">
+                03
+              </div>
+              <h3 className="text-base font-bold mb-2">Rekam Rapat &amp; AI MoM</h3>
+              <p className={`text-xs leading-relaxed ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                Mulai rekaman suara pertemuan tatap muka. Mesin AI MoM langsung mentranskripsi dan merangkum keputusan rapat beserta PIC-nya.
+              </p>
+            </div>
+
+            <div className={`p-6 rounded-3xl border transition ${isDark ? "bg-[#0E1A30]/70 border-white/10" : "bg-white border-[#E6ECF7] shadow-xs"}`}>
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-sm mb-4">
+                04
+              </div>
+              <h3 className="text-base font-bold mb-2">Auto Google Calendar</h3>
+              <p className={`text-xs leading-relaxed ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                Tindak lanjut otomatis terjadwal di Google Calendar kedua belah pihak dan notula resmi siap dibagikan ke grup WhatsApp.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 04. INTERACTIVE LIVE MOM DEMO PLAYER */}
+      <section id="demo-mom" className="py-16 md:py-24 relative overflow-hidden bg-slate-50/50 dark:bg-[#070D1E]">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold mb-3 uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Simulasi Interaktif Rapat AI</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-black tracking-tight mb-3">
+              Lihat Bagaimana AI MoM Mengubah Percakapan Rapat Jadi Tindakan
+            </h2>
+            <p className={`text-sm leading-relaxed ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+              Coba simulasi pemrosesan transkripsi dan ekstraksi notulen otomatis dari rekaman rapat bisnis berikut:
+            </p>
+          </div>
+
+          <div className={`rounded-3xl border p-6 sm:p-8 max-w-4xl mx-auto shadow-xl transition bg-white dark:bg-[#0E1A30] ${
+            isDark ? "border-white/10" : "border-slate-200"
+          }`}>
+            {/* Audio Wave & Trigger Bar */}
+            <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 ${
+              isDark ? "bg-[#070F1E] border-white/10" : "bg-slate-50 border-slate-200"
+            }`}>
+              <div className="flex items-center gap-3.5">
+                <button
+                  onClick={runDemoPipeline}
+                  disabled={demoRunning}
+                  className="w-12 h-12 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-sky-600/20 transition cursor-pointer"
+                  title="Putar Simulasi Audio Rapat"
+                >
+                  {demoRunning ? (
+                    <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  ) : (
+                    <Play className="w-5 h-5 ml-0.5 fill-current" />
+                  )}
+                </button>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Sample Audio: Rapat Kemitraan Eksekutif Cardi (24 Menit)
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {demoRunning
+                      ? demoStep === 1
+                        ? "🎙️ Membaca rekaman suara audio..."
+                        : demoStep === 2
+                        ? "⚡ Mentranskripsi pembicaraan..."
+                        : "🤖 Mengekstrak ringkasan, keputusan & action items..."
+                      : "Klik tombol play untuk menjalankan simulasi pemrosesan AI"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Animated Waveform */}
+              <div className="flex items-center gap-1 h-8 px-2">
+                {[12, 24, 16, 28, 20, 14, 30, 22, 18, 26, 15, 20].map((h, i) => (
+                  <span
+                    key={i}
+                    style={{ height: demoRunning ? `${h}px` : "8px" }}
+                    className={`w-1 rounded-full transition-all duration-300 ${
+                      demoRunning ? "bg-sky-500 animate-pulse" : "bg-slate-300 dark:bg-white/20"
+                    }`}
+                  />
+                ))}
               </div>
             </div>
 
-            {/* Step 2 */}
-            <div className="bg-white p-6 rounded-2xl border border-[#E6ECF7] shadow-sm flex flex-col justify-between hover:border-[#1E4FFF]/40 transition group">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-[#EEF4FF] text-[#1E4FFF] font-black text-sm flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                  02
-                </div>
-                <h3 className="font-bold text-base text-[#0A1633] mb-1.5">Simpan Kontak (.vcf)</h3>
-                <p className="text-xs text-[#3D4B6B] leading-relaxed">
-                  Rekan Anda menekan satu tombol &quot;Simpan Kontak&quot;. Seluruh nama, jabatan, email, dan nomor WhatsApp otomatis tersimpan di buku telepon.
-                </p>
+            {/* Results Tabs */}
+            <div className="space-y-4">
+              <div className={`flex border-b text-xs font-bold gap-6 ${isDark ? "border-white/10" : "border-slate-200"}`}>
+                <button
+                  onClick={() => setDemoTab("summary")}
+                  className={`pb-3 border-b-2 transition cursor-pointer ${
+                    demoTab === "summary"
+                      ? "border-sky-600 text-sky-600 dark:text-sky-400"
+                      : "border-transparent text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                  }`}
+                >
+                  Ringkasan Eksekutif
+                </button>
+                <button
+                  onClick={() => setDemoTab("decisions")}
+                  className={`pb-3 border-b-2 transition cursor-pointer ${
+                    demoTab === "decisions"
+                      ? "border-sky-600 text-sky-600 dark:text-sky-400"
+                      : "border-transparent text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                  }`}
+                >
+                  Keputusan Rapat (2)
+                </button>
+                <button
+                  onClick={() => setDemoTab("actions")}
+                  className={`pb-3 border-b-2 transition cursor-pointer ${
+                    demoTab === "actions"
+                      ? "border-sky-600 text-sky-600 dark:text-sky-400"
+                      : "border-transparent text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                  }`}
+                >
+                  Action Items &amp; PIC (2)
+                </button>
+                <button
+                  onClick={() => setDemoTab("whatsapp")}
+                  className={`pb-3 border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
+                    demoTab === "whatsapp"
+                      ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
+                      : "border-transparent text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                  }`}
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Format WhatsApp</span>
+                </button>
               </div>
-              <div className="mt-4 pt-3 border-t border-[#E6ECF7] text-[11px] font-semibold text-[#1E4FFF] flex items-center gap-1">
-                <span>Ekspor vCard Instan</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </div>
-            </div>
 
-            {/* Step 3 */}
-            <div className="bg-white p-6 rounded-2xl border border-[#E6ECF7] shadow-sm flex flex-col justify-between hover:border-[#1E4FFF]/40 transition group">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-[#EEF4FF] text-[#1E4FFF] font-black text-sm flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                  03
-                </div>
-                <h3 className="font-bold text-base text-[#0A1633] mb-1.5">Rekam Suara Rapat</h3>
-                <p className="text-xs text-[#3D4B6B] leading-relaxed">
-                  Luncurkan perekam Cardi MoM langsung dari halaman tap. Suara rapat tatap muka direkam dan dienkripsi dengan standar korporasi.
-                </p>
-              </div>
-              <div className="mt-4 pt-3 border-t border-[#E6ECF7] text-[11px] font-semibold text-[#1E4FFF] flex items-center gap-1">
-                <span>AI Voice Recording</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </div>
-            </div>
+              {/* Tab Content Display */}
+              <div className={`p-5 rounded-2xl border text-xs leading-relaxed ${
+                isDark ? "bg-[#070F1E] border-white/10" : "bg-slate-50 border-slate-200"
+              }`}>
+                {demoTab === "summary" && (
+                  <div className="space-y-3">
+                    <p className="text-slate-700 dark:text-slate-300">
+                      <strong>Ringkasan Eksekutif:</strong> Pertemuan antara <strong>Deo Cardi Nathanael (CEO Cardi Nusantara)</strong> dan <strong>Reza Pratama (Managing Director)</strong> berjalan lancar. Kedua belah pihak menyepakati pengadaan 50 unit Cardi Smart NFC Card untuk jajaran eksekutif dan manajerial, didukung asisten AI MoM untuk memangkas waktu pembuatan notula manual hingga 85%.
+                    </p>
+                    <div className="flex items-center gap-3 pt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                      <span>Model: <strong>cardi-ai-voice-v2</strong></span>
+                      <span>•</span>
+                      <span>Akurasi: <strong>99.4%</strong></span>
+                      <span>•</span>
+                      <span className="text-emerald-600 font-bold">Terverifikasi Otomatis</span>
+                    </div>
+                  </div>
+                )}
 
-            {/* Step 4 */}
-            <div className="bg-white p-6 rounded-2xl border border-[#E6ECF7] shadow-sm flex flex-col justify-between hover:border-[#1E4FFF]/40 transition group">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-[#EEF4FF] text-[#1E4FFF] font-black text-sm flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                  04
-                </div>
-                <h3 className="font-bold text-base text-[#0A1633] mb-1.5">Notula &amp; WA Otomatis</h3>
-                <p className="text-xs text-[#3D4B6B] leading-relaxed">
-                  Dalam hitungan detik, AI membedah poin kesepakatan, ringkasan eksekutif, dan pembagian tugas yang langsung dikirim ke WhatsApp tim.
-                </p>
-              </div>
-              <div className="mt-4 pt-3 border-t border-[#E6ECF7] text-[11px] font-semibold text-[#1E4FFF] flex items-center gap-1">
-                <span>Action Items Sync</span>
-                <ChevronRight className="w-3.5 h-3.5" />
+                {demoTab === "decisions" && (
+                  <div className="space-y-2.5">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 font-bold text-[10px]">1</div>
+                      <p className="text-slate-800 dark:text-slate-200 font-medium">
+                        Mengadopsi Cardi Smart NFC Card sebagai standar resmi networking dan ID eksekutif perusahaan.
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 font-bold text-[10px]">2</div>
+                      <p className="text-slate-800 dark:text-slate-200 font-medium">
+                        Mengintegrasikan notula AI MoM dengan alur distribusi grup WhatsApp internal dan kalender kerja.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {demoTab === "actions" && (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-slate-900 dark:text-white">[Action Item] Kirimkan invoice dan proposal teknis 50 kartu NFC</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">PIC: Deo Cardi Nathanael • Deadline: 2 hari lagi</div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-sky-500/10 text-sky-600 px-2 py-1 rounded-full">Google Cal Ready</span>
+                    </div>
+                    <div className="p-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-slate-900 dark:text-white">[Action Item] Jadwalkan sesi onboarding batch 1 bersama tim sales</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">PIC: Reza Pratama • Deadline: 4 hari lagi</div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-sky-500/10 text-sky-600 px-2 py-1 rounded-full">Google Cal Ready</span>
+                    </div>
+                  </div>
+                )}
+
+                {demoTab === "whatsapp" && (
+                  <div className="space-y-3">
+                    <div className="font-mono text-[11px] bg-white dark:bg-black/30 p-3.5 rounded-xl border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+{`*NOTULA RESMI CARDI MOM: RAPAT KEMITRAAN EKSEKUTIF*
+📅 Tanggal: Hari Ini | ⏱️ Durasi: 24 Menit
+👥 Peserta: Deo Cardi Nathanael (CEO), Reza Pratama (Managing Director)
+
+*RINGKASAN EKSEKUTIF:*
+Pertemuan menyepakati implementasi 50 unit Cardi Smart NFC Card untuk jajaran eksekutif, integrasi AI MoM dengan WhatsApp corporate, dan uji coba pilot 14 hari.
+
+*KEPUTUSAN RAPAT:*
+• Mengadopsi Cardi Smart NFC Card sebagai standar ID bisnis eksekutif.
+• Menghubungkan seluruh meeting komersial dengan notula AI otomatis.
+
+*ACTION ITEMS:*
+[ ] Kirim final invoice paket tim 50 kartu NFC (PIC: Tim Cardi)
+[ ] Sinkronisasi kalender tim ke Google Workspace (PIC: Reza Pratama)
+
+_Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
+                    </div>
+                    <button
+                      onClick={copyWhatsAppSample}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      {demoCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{demoCopied ? "Berhasil Disalin!" : "Salin Format WhatsApp"}</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 05. HARDWARE CRAFTSMANSHIP & CHIP SPECIFICATIONS */}
-      <section id="hardware-card" className="py-20 bg-white border-b border-[#E6ECF7]">
-        <div className="max-w-[1240px] mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            
-            {/* Visual Card Craftsmanship */}
-            <div className="lg:col-span-6 flex justify-center">
-              <div className="w-full max-w-[420px] bg-[#070D1E] p-7 rounded-[28px] border border-white/15 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-[#1E4FFF]/25 rounded-full blur-3xl pointer-events-none" />
+      {/* 05. GOOGLE & CALENDAR INTEGRATION */}
+      <section id="google-calendar" className="py-16 md:py-24 relative overflow-hidden">
+        <div className="max-w-6xl mx-auto px-6">
+          <div
+            className={`rounded-3xl border p-8 md:p-12 relative overflow-hidden ${
+              isDark
+                ? "bg-gradient-to-br from-[#0E1A30] via-[#091122] to-[#050914] border-white/10"
+                : "bg-gradient-to-br from-sky-50/70 via-white to-slate-50 border-[#E6ECF7] shadow-sm"
+            }`}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              <div className="lg:col-span-7">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30 text-xs font-bold mb-4">
+                  <CalendarCheck className="w-3.5 h-3.5" />
+                  <span>Google Identity &amp; Calendar API</span>
+                </div>
+                <h2 className="text-2xl sm:text-4xl font-black tracking-tight mb-4 text-slate-900 dark:text-white">
+                  Terhubung Langsung dengan Akun Google &amp; Kalender Kerja Anda
+                </h2>
+                <p className={`text-sm leading-relaxed mb-6 ${isDark ? "text-slate-300" : "text-[#3D4B6B]"}`}>
+                  Satu akun Google untuk masuk ke portal kartu NFC web, menyinkronkan agenda ke Google Calendar, dan menyelaraskan rekaman rapat ke aplikasi mobile Cardi MoM.
+                </p>
 
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-[#00C2D1]" />
-                    <span className="font-mono text-xs font-bold text-white uppercase tracking-wider">
-                      Cardi Hardware Spec
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <span className="text-xs leading-relaxed">
+                      <strong>Single Sign-On Google:</strong> Otentikasi aman tanpa ribet verifikasi berulang.
                     </span>
                   </div>
-                  <span className="text-[10px] bg-[#10B981]/20 text-[#10B981] font-mono font-bold px-2 py-0.5 rounded-full border border-[#10B981]/30">
-                    ISO/IEC 14443 Type A
-                  </span>
-                </div>
-
-                <div className="space-y-4 text-xs">
-                  <div className="flex items-start justify-between">
-                    <span className="text-white/60">Chip Model:</span>
-                    <span className="text-white font-bold font-mono">NXP NTAG215 (High Frequency)</span>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <span className="text-xs leading-relaxed">
+                      <strong>Auto-Sync Action Items ke Kalender:</strong> Tindak lanjut rapat otomatis terjadwal lengkap dengan tanggal tenggat dan PIC.
+                    </span>
                   </div>
-                  <div className="flex items-start justify-between">
-                    <span className="text-white/60">Frekuensi Operasional:</span>
-                    <span className="text-white font-bold font-mono">13.56 MHz Contactless</span>
-                  </div>
-                  <div className="flex items-start justify-between">
-                    <span className="text-white/60">Kapasitas Penyimpanan:</span>
-                    <span className="text-white font-bold font-mono">504 Bytes (NDEF Formatted)</span>
-                  </div>
-                  <div className="flex items-start justify-between">
-                    <span className="text-white/60">Daya Tahan Penulisan:</span>
-                    <span className="text-white font-bold font-mono">100.000 Siklus Baca/Tulis</span>
-                  </div>
-                  <div className="flex items-start justify-between">
-                    <span className="text-white/60">Retensi Data:</span>
-                    <span className="text-white font-bold font-mono">10 Tahun Tanpa Baterai</span>
-                  </div>
-                  <div className="flex items-start justify-between">
-                    <span className="text-white/60">Material Kartu:</span>
-                    <span className="text-white font-bold">Matte PVC Premium / Metal Steel</span>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <span className="text-xs leading-relaxed">
+                      <strong>Jadwalkan Langsung dari Profil Tap:</strong> Siapapun yang men-tap kartu Anda dapat langsung memesan slot rapat di Google Calendar.
+                    </span>
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-white/50">
-                  <span>Kompatibel: iPhone XR+ &amp; Semua Android NFC</span>
-                  <Radio className="w-4 h-4 text-[#00C2D1] animate-pulse" />
+                <Link
+                  href="/login"
+                  className="bg-sky-600 hover:bg-sky-500 text-white px-5 py-3 rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-lg shadow-sky-600/25 transition cursor-pointer"
+                >
+                  <span>Masuk dengan Akun Google</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+
+              {/* Graphic illustration */}
+              <div className="lg:col-span-5 flex justify-center">
+                <div
+                  className={`w-full max-w-sm border rounded-2xl p-5 shadow-xl ${
+                    isDark ? "bg-[#070F1E] border-white/10" : "bg-white border-[#E6ECF7]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-sky-600" />
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">Google Calendar</span>
+                    </div>
+                    <span className="text-[10px] bg-emerald-500/15 text-emerald-600 font-bold px-2 py-0.5 rounded-full">
+                      Tersinkron
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 text-xs">
+                    <div className="p-3 bg-sky-50 dark:bg-sky-500/10 border border-sky-100 dark:border-sky-500/25 rounded-xl">
+                      <div className="font-bold text-sky-700 dark:text-sky-300">Follow-up Demo Kemitraan</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Besok • 14:00 - 15:00 • Google Meet
+                      </div>
+                    </div>
+                    <div className="p-3 bg-purple-50 dark:bg-purple-500/10 border border-purple-100 dark:border-purple-500/25 rounded-xl">
+                      <div className="font-bold text-purple-700 dark:text-purple-300">[Action Item] Kirim Proposal</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        PIC: Tim Bisnis • Otomatis dari MoM
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-
-            {/* Hardware Feature Copy */}
-            <div className="lg:col-span-6 flex flex-col items-start">
-              <div className="eyebrow-badge mb-3">
-                <CreditCard className="w-3.5 h-3.5 text-[#1E4FFF]" />
-                <span>KUALITAS PERANGKAT KERAS</span>
-              </div>
-              <h2 className="text-2xl sm:text-4xl font-black text-[#0A1633] tracking-tight leading-tight mb-4">
-                Didesain Mewah. <br />
-                <span className="text-[#1E4FFF]">Tahan Air &amp; Tanpa Baterai.</span>
-              </h2>
-              <p className="text-[#3D4B6B] text-sm sm:text-base leading-relaxed mb-6">
-                Setiap kartu pintar Cardi dilengkapi chip NTAG215 presisi tinggi yang dapat ditulis ulang kapan saja melalui dashboard browser atau aplikasi NFC Tools.
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                <div className="p-4 bg-[#F8FAFD] rounded-xl border border-[#E6ECF7]">
-                  <h4 className="font-bold text-xs text-[#0A1633] mb-1">Web NFC Direct Writer</h4>
-                  <p className="text-[11px] text-[#3D4B6B]">
-                    Tulis URL profil ke chip kartu fisik langsung dari Chrome Android tanpa aplikasi tambahan.
-                  </p>
-                </div>
-                <div className="p-4 bg-[#F8FAFD] rounded-xl border border-[#E6ECF7]">
-                  <h4 className="font-bold text-xs text-[#0A1633] mb-1">Passcode Lock Protection</h4>
-                  <p className="text-[11px] text-[#3D4B6B]">
-                    Dapat dikunci secara permanen atau dilindungi password agar data URL tidak bisa ditimpa orang lain.
-                  </p>
-                </div>
-                <div className="p-4 bg-[#F8FAFD] rounded-xl border border-[#E6ECF7]">
-                  <h4 className="font-bold text-xs text-[#0A1633] mb-1">Finishing Eksekutif</h4>
-                  <p className="text-[11px] text-[#3D4B6B]">
-                    Pilihan lapisan matte obsidian, gold foil, dan laser engraving untuk logo perusahaan Anda.
-                  </p>
-                </div>
-                <div className="p-4 bg-[#F8FAFD] rounded-xl border border-[#E6ECF7]">
-                  <h4 className="font-bold text-xs text-[#0A1633] mb-1">Sinkronisasi Real-Time</h4>
-                  <p className="text-[11px] text-[#3D4B6B]">
-                    Ubah nomor WA atau jabatan di dashboard kapan saja tanpa perlu mencetak kartu baru.
-                  </p>
-                </div>
-              </div>
-            </div>
-
           </div>
         </div>
       </section>
 
-      {/* 06. MOBILE APP & COIN ECOSYSTEM */}
-      <section id="mobile-app" className="py-20 bg-[#070D1E] text-white relative overflow-hidden">
-        <div className="absolute inset-0 grid-bg-dark opacity-40 pointer-events-none" />
-        <div className="max-w-[1240px] mx-auto px-6 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-            
-            <div className="lg:col-span-7 flex flex-col items-start">
-              <div className="eyebrow-badge-dark mb-3">
-                <Smartphone className="w-3.5 h-3.5 text-[#00C2D1]" />
-                <span>APLIKASI MOBILE &amp; DOMPET KOIN</span>
-              </div>
-              <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight mb-4">
-                Satu Akun, Satu Saldo Koin <br />
-                <span className="text-[#00C2D1]">Untuk Kartu &amp; Rekaman MoM</span>
-              </h2>
-              <p className="text-white/70 text-sm sm:text-base leading-relaxed mb-6">
-                Hubungkan kartu fisik Anda ke aplikasi <strong>Cardi MoM (Play Store &amp; App Store)</strong>. Saldo koin rapat dapat digunakan bersama untuk transkripsi audio AI, ekspor notula ke WhatsApp, dan pengelolaan profil kartu.
-              </p>
-
-              <div className="flex flex-wrap items-center gap-4">
-                <Link
-                  href="/dashboard/wallet"
-                  className="bg-[#00C2D1] hover:bg-[#00A8B8] text-[#070D1E] px-6 py-3 rounded-xl font-extrabold text-xs shadow-lg transition btn-press flex items-center gap-2"
-                >
-                  <Coins className="w-4 h-4" />
-                  <span>Cek Pairing &amp; Saldo Koin</span>
-                </Link>
-                <Link
-                  href="/deo"
-                  target="_blank"
-                  className="bg-white/10 hover:bg-white/15 border border-white/20 text-white px-5 py-3 rounded-xl font-bold text-xs transition btn-press flex items-center gap-2"
-                >
-                  <span>Lihat Demo Profil Publik</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </Link>
-              </div>
+      {/* 06. HARDWARE SPECS (NXP NTAG215) */}
+      <section id="spesifikasi" className="py-16 md:py-24 border-t border-[#E6ECF7] dark:border-white/10 relative">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center max-w-xl mx-auto mb-12">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 text-xs font-bold mb-3">
+              <Cpu className="w-3.5 h-3.5" />
+              <span>Standar Perangkat Keras Industri</span>
             </div>
-
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="w-full max-w-[320px] bg-gradient-to-b from-[#0E1E42] to-[#0A1633] p-6 rounded-3xl border border-white/15 shadow-2xl text-center">
-                <div className="w-16 h-16 rounded-2xl bg-[#1E4FFF] text-white flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#1E4FFF]/30">
-                  <Smartphone className="w-8 h-8" />
-                </div>
-                <h4 className="font-bold text-base text-white mb-1">Cardi MoM Mobile</h4>
-                <p className="text-xs text-white/60 mb-5">Tersedia untuk Android &amp; iOS</p>
-                <div className="space-y-2.5">
-                  <div className="p-3 bg-white/5 border border-white/10 rounded-xl text-left flex items-center justify-between">
-                    <span className="text-xs font-semibold text-white">Google Play Store</span>
-                    <span className="text-[10px] bg-[#10B981]/20 text-[#10B981] font-bold px-2 py-0.5 rounded">Rilis</span>
-                  </div>
-                  <div className="p-3 bg-white/5 border border-white/10 rounded-xl text-left flex items-center justify-between">
-                    <span className="text-xs font-semibold text-white">Apple App Store</span>
-                    <span className="text-[10px] bg-[#10B981]/20 text-[#10B981] font-bold px-2 py-0.5 rounded">Rilis</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* 07. PRICING & COIN SCHEME */}
-      <section id="harga" className="py-20 bg-white border-b border-[#E6ECF7]">
-        <div className="max-w-[1240px] mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <div className="eyebrow-badge mb-3">
-              <Coins className="w-3.5 h-3.5 text-[#1E4FFF]" />
-              <span>SKEMA HARGA &amp; KOIN</span>
-            </div>
-            <h2 className="text-2xl sm:text-4xl font-black text-[#0A1633] tracking-tight">
-              Mulai Rp 99 Ribu. <br />
-              <span className="text-[#1E4FFF]">Sederhana, Transparan, &amp; Fleksibel.</span>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+              Spesifikasi Fisik Chip NXP NTAG215
             </h2>
-            <p className="text-[#3D4B6B] text-sm sm:text-base mt-3">
-              Gunakan sistem koin bersama. 1 jam rekaman rapat = 10 koin. Top-up saldo koin kapan saja sesuai kebutuhan tim.
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className={`p-5 rounded-2xl border text-center ${isDark ? "bg-white/5 border-white/10" : "bg-white border-[#E6ECF7] shadow-xs"}`}>
+              <div className="text-2xl font-black text-sky-600 dark:text-sky-400 font-mono">504 B</div>
+              <div className="text-xs font-bold mt-1 text-slate-900 dark:text-white">Kapasitas Memori</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">Chip NXP Original</div>
+            </div>
+
+            <div className={`p-5 rounded-2xl border text-center ${isDark ? "bg-white/5 border-white/10" : "bg-white border-[#E6ECF7] shadow-xs"}`}>
+              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">0 mAh</div>
+              <div className="text-xs font-bold mt-1 text-slate-900 dark:text-white">Tanpa Baterai</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">Ditenagai Medan NFC HP</div>
+            </div>
+
+            <div className={`p-5 rounded-2xl border text-center ${isDark ? "bg-white/5 border-white/10" : "bg-white border-[#E6ECF7] shadow-xs"}`}>
+              <div className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">100k+</div>
+              <div className="text-xs font-bold mt-1 text-slate-900 dark:text-white">Daya Tahan Tap</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">Garansi Chip Awet</div>
+            </div>
+
+            <div className={`p-5 rounded-2xl border text-center ${isDark ? "bg-white/5 border-white/10" : "bg-white border-[#E6ECF7] shadow-xs"}`}>
+              <div className="text-2xl font-black text-purple-600 dark:text-purple-400 font-mono">99.8%</div>
+              <div className="text-xs font-bold mt-1 text-slate-900 dark:text-white">Kompatibilitas HP</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">iPhone &amp; Android</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 07. PRICING & PACKAGES SECTION (OFFICIAL ECOSYSTEM PRICES) */}
+      <section id="harga" className="py-16 md:py-24 border-t border-[#E6ECF7] dark:border-white/10 relative bg-slate-50/40 dark:bg-transparent">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold mb-3 uppercase tracking-wider">
+              <span>Paket Kartu &amp; Bundling Koin MoM</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-black tracking-tight mb-3 text-slate-900 dark:text-white">
+              Investasi Satu Kali, Produktivitas Berkelanjutan
+            </h2>
+            <p className={`text-sm leading-relaxed ${isDark ? "text-slate-400" : "text-[#3D4B6B]"}`}>
+              Dapatkan kartu fisik pintar NFC berstandar industri dengan opsi paket bundling koin MoM untuk pembuatan notulen meeting otomatis.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Starter */}
-            <div className="bg-[#F8FAFD] p-6 rounded-2xl border border-[#E6ECF7] flex flex-col justify-between hover:border-[#1E4FFF]/40 transition">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* 1. Card Only */}
+            <div className={`p-6 rounded-3xl border flex flex-col justify-between transition bg-white dark:bg-[#0E1A30] ${
+              isDark ? "border-white/10" : "border-slate-200 shadow-xs"
+            }`}>
               <div>
-                <span className="text-xs font-bold text-[#6B7A9C] uppercase tracking-wider">Starter</span>
-                <div className="text-2xl font-black text-[#0A1633] mt-2 mb-1">
-                  Rp 99.000 <span className="text-xs font-normal text-[#6B7A9C]">/ bln</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Starter Standalone
+                </span>
+                <h3 className="text-lg font-black mt-1 mb-2 text-slate-900 dark:text-white">
+                  Card Only
+                </h3>
+                <div className="flex items-baseline gap-1 mb-4">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">Rp 49.000</span>
+                  <span className="text-xs text-slate-500">/ kartu</span>
                 </div>
-                <p className="text-xs text-[#3D4B6B] mb-5">Cocok untuk profesional &amp; freelancer.</p>
-                <div className="space-y-2 text-xs text-[#3D4B6B]">
-                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-[#10B981]" /> <span>100 Koin Rapat (~10 jam rekaman)</span></div>
-                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-[#10B981]" /> <span>1 Smart NFC Card Fisik (Matte PVC)</span></div>
-                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-[#10B981]" /> <span>Ekspor Notula ke WhatsApp</span></div>
-                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-[#10B981]" /> <span>Download Profil vCard .vcf</span></div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
+                  Kartu fisik NFC pintar murni untuk bertukar kontak profil vCard tanpa batasan tap.
+                </p>
+
+                <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-300 mb-6">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Kartu Fisik NFC + NTAG215</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Unlimited Tap &amp; vCard Profil</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Cadangan QR Laser Engraved</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-slate-400 shrink-0" />
+                    <span className="text-slate-400">0 Koin MoM (Top-up terpisah)</span>
+                  </div>
                 </div>
               </div>
-              <Link href="/dashboard/wallet" className="mt-6 w-full py-2.5 rounded-xl bg-white border border-[#E6ECF7] hover:bg-[#EEF4FF] text-[#1E4FFF] font-bold text-xs text-center transition btn-press">
-                Pilih Starter
-              </Link>
+
+              <a
+                href="https://wa.me/6281289895646?text=Halo%20Cardi%2C%20saya%20ingin%20pesan%20NFC%20Card%20Only%20(Rp%2049.000)."
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-3 rounded-xl font-bold text-xs bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-900 dark:text-white flex items-center justify-center gap-1.5 transition"
+              >
+                <span>Pesan Card Only</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </a>
             </div>
 
-            {/* Business Pro (Popular) */}
-            <div className="bg-white p-6 rounded-2xl border-2 border-[#1E4FFF] shadow-xl relative flex flex-col justify-between">
-              <span className="absolute -top-3 right-6 bg-[#1E4FFF] text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-md">
-                Paling Populer
+            {/* 2. Card + Quick */}
+            <div className={`p-6 rounded-3xl border flex flex-col justify-between transition bg-white dark:bg-[#0E1A30] ${
+              isDark ? "border-white/10" : "border-slate-200 shadow-xs"
+            }`}>
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                  Bundling Hemat
+                </span>
+                <h3 className="text-lg font-black mt-1 mb-2 text-slate-900 dark:text-white">
+                  Card + Quick
+                </h3>
+                <div className="flex items-baseline gap-1 mb-4">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">Rp 139.000</span>
+                  <span className="text-xs text-slate-500">/ paket</span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
+                  Solusi ideal untuk profesional mandiri: Kartu NFC + Saldo Koin notula AI esensial.
+                </p>
+
+                <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-300 mb-6">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Kartu Fisik NFC + NTAG215</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span><strong>500 Koin MoM</strong> (~100x rapat)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Profil vCard &amp; Unlimited Tap</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Integrasi Google Calendar</span>
+                  </div>
+                </div>
+              </div>
+
+              <a
+                href="https://wa.me/6281289895646?text=Halo%20Cardi%2C%20saya%20ingin%20pesan%20paket%20Card%20%2B%20Quick%20500%20Koin%20(Rp%20139.000)."
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-3 rounded-xl font-bold text-xs bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-900 dark:text-white flex items-center justify-center gap-1.5 transition"
+              >
+                <span>Pesan Card + Quick</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
+
+            {/* 3. Card + Bulk (Best Value / Populer) */}
+            <div className="p-6 rounded-3xl border-2 border-[#1E4FFF] shadow-xl shadow-blue-500/10 flex flex-col justify-between relative bg-white dark:bg-[#0E1A30]">
+              <span className="absolute -top-3.5 right-4 bg-gradient-to-r from-[#0258A4] to-[#1E4FFF] text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                Paling Hemat
               </span>
+
               <div>
-                <span className="text-xs font-bold text-[#1E4FFF] uppercase tracking-wider">Business Pro</span>
-                <div className="text-2xl font-black text-[#0A1633] mt-2 mb-1">
-                  Rp 299.000 <span className="text-xs font-normal text-[#6B7A9C]">/ bln</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                  Best Value
+                </span>
+                <h3 className="text-lg font-black mt-1 mb-2 text-slate-900 dark:text-white">
+                  Card + Bulk
+                </h3>
+                <div className="flex items-baseline gap-1 mb-4">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">Rp 399.000</span>
+                  <span className="text-xs text-slate-500">/ paket</span>
                 </div>
-                <p className="text-xs text-[#3D4B6B] mb-5">Untuk tim manajerial &amp; konsultan bisnis.</p>
-                <div className="space-y-2 text-xs text-[#3D4B6B]">
-                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-[#1E4FFF]" /> <span>400 Koin Rapat (~40 jam rekaman)</span></div>
-                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-[#1E4FFF]" /> <span>3 Smart NFC Card Fisik Custom Logo</span></div>
-                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-[#1E4FFF]" /> <span>Multi-speaker Diarization Akurat</span></div>
-                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-[#1E4FFF]" /> <span>Sinkronisasi Google Calendar Otomatis</span></div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
+                  Bundling terlengkap bagi CEO, konsultan, dan tim bisnis dengan kebutuhan rapat rutin tinggi.
+                </p>
+
+                <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-300 mb-6">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Kartu Fisik NFC Premium Edition</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span><strong>2.500 Koin MoM</strong> (~500x rapat)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Prioritas Pemrosesan AI Model Voice</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Auto Dispatch Notula ke WhatsApp</span>
+                  </div>
                 </div>
               </div>
-              <Link href="/dashboard/wallet" className="mt-6 w-full py-2.5 rounded-xl bg-[#1E4FFF] hover:bg-[#153DCC] text-white font-bold text-xs text-center transition shadow-md shadow-[#1E4FFF]/25 btn-press">
-                Mulai Business Pro
-              </Link>
+
+              <a
+                href="https://wa.me/6281289895646?text=Halo%20Cardi%2C%20saya%20ingin%20pesan%20paket%20Card%20%2B%20Bulk%202500%20Koin%20(Rp%20399.000)."
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-3.5 rounded-xl font-bold text-xs bg-gradient-to-r from-[#0258A4] to-[#1E4FFF] hover:brightness-110 text-white flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/25 transition"
+              >
+                <span>Pesan Card + Bulk</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </a>
             </div>
 
-            {/* Enterprise */}
-            <div className="bg-[#F8FAFD] p-6 rounded-2xl border border-[#E6ECF7] flex flex-col justify-between hover:border-[#1E4FFF]/40 transition">
+            {/* 4. Enterprise / Corporate */}
+            <div className={`p-6 rounded-3xl border flex flex-col justify-between transition bg-white dark:bg-[#0E1A30] ${
+              isDark ? "border-white/10" : "border-slate-200 shadow-xs"
+            }`}>
               <div>
-                <span className="text-xs font-bold text-[#6B7A9C] uppercase tracking-wider">Enterprise</span>
-                <div className="text-2xl font-black text-[#0A1633] mt-2 mb-1">
-                  Custom <span className="text-xs font-normal text-[#6B7A9C]">/ tim</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Custom Corporate
+                </span>
+                <h3 className="text-lg font-black mt-1 mb-2 text-slate-900 dark:text-white">
+                  Tim &amp; Perusahaan
+                </h3>
+                <div className="flex items-baseline gap-1 mb-4">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">Custom</span>
+                  <span className="text-xs text-slate-500">/ organisasi</span>
                 </div>
-                <p className="text-xs text-[#3D4B6B] mb-5">Untuk korporasi dan institusi skala besar.</p>
-                <div className="space-y-2 text-xs text-[#3D4B6B]">
-                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-[#10B981]" /> <span>Koin Tanpa Batas / Kuota Besar</span></div>
-                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-[#10B981]" /> <span>Kartu NFC Fisik Metal / Stainless Steel</span></div>
-                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-[#10B981]" /> <span>Integrasi API &amp; Webhook ERP</span></div>
-                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-[#10B981]" /> <span>Dedicated Account Manager</span></div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
+                  Desain kartu kustom brand logo, dashboard admin terpusat, dan integrasi CRM perusahaan.
+                </p>
+
+                <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-300 mb-6">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Kartu Custom Brand Logo &amp; Warna</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Unlimited Pool Koin MoM untuk Tim</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Admin Central Dashboard &amp; Analytics</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Integrasi API / Webhook ke CRM</span>
+                  </div>
                 </div>
               </div>
-              <Link href="https://wa.me/6281283625471" target="_blank" className="mt-6 w-full py-2.5 rounded-xl bg-white border border-[#E6ECF7] hover:bg-[#EEF4FF] text-[#0A1633] font-bold text-xs text-center transition btn-press">
-                Hubungi Sales via WA
-              </Link>
+
+              <a
+                href="https://wa.me/6281289895646?text=Halo%20Cardi%2C%20saya%20ingin%20konsultasi%20paket%20NFC%20Smart%20Card%20dan%20MoM%20untuk%20tim%20perusahaan."
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-3 rounded-xl font-bold text-xs bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-900 dark:text-white flex items-center justify-center gap-1.5 transition"
+              >
+                <span>Kontak Tim Cardi</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 08. FOOTER */}
-      <footer className="bg-[#070D1E] text-white border-t border-white/10 pt-16 pb-12">
-        <div className="max-w-[1240px] mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-10 mb-12">
-            <div className="md:col-span-5">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-[#1E4FFF] flex items-center justify-center font-black text-sm">C</div>
-                <span className="text-lg font-black tracking-tight">Cardi MoM &amp; Smart NFC</span>
+      {/* 08. INTERACTIVE FAQ ACCORDION */}
+      <section id="faq" className="py-16 md:py-24 border-t border-[#E6ECF7] dark:border-white/10 relative">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="text-center max-w-xl mx-auto mb-12">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 text-xs font-bold mb-3 uppercase tracking-wider">
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>Pertanyaan Umum</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+              Semua yang Perlu Anda Ketahui
+            </h2>
+          </div>
+
+          <div className="space-y-3">
+            {faqs.map((faq, i) => (
+              <div
+                key={i}
+                className={`border rounded-2xl transition bg-white dark:bg-[#0E1A30] overflow-hidden ${
+                  openFaq === i
+                    ? "border-sky-500 shadow-sm"
+                    : "border-slate-200 dark:border-white/10"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full text-left p-5 flex items-center justify-between gap-4 font-bold text-sm text-slate-900 dark:text-white cursor-pointer"
+                >
+                  <span>{faq.q}</span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
+                      openFaq === i ? "rotate-180 text-sky-600" : ""
+                    }`}
+                  />
+                </button>
+                {openFaq === i && (
+                  <div className="px-5 pb-5 pt-1 text-xs text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-white/5 animate-in fade-in duration-150">
+                    {faq.a}
+                  </div>
+                )}
               </div>
-              <p className="text-xs text-white/70 max-w-sm leading-relaxed mb-4">
-                Ekosistem kartu nama pintar NFC terintegrasi langsung dengan AI Minutes of Meeting (MoM). Rapat selesai, notula beres, relasi bisnis terjaga.
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 09. COMPANION MOBILE APP (Cardi MoM) */}
+      <section id="unduh-aplikasi" className="py-16 md:py-24 border-t border-[#E6ECF7] dark:border-white/10 relative text-center">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold mb-4 uppercase tracking-wider">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Resmi Live di Android &amp; iOS</span>
+          </div>
+
+          <h2 className="text-2xl sm:text-4xl font-black tracking-tight mb-3 text-slate-900 dark:text-white">
+            Unduh Aplikasi Mobile Cardi MoM
+          </h2>
+          <p className={`text-sm leading-relaxed max-w-2xl mx-auto mb-8 ${isDark ? "text-slate-300" : "text-[#3D4B6B]"}`}>
+            Kombinasi terbaik kartu nama cerdas dan asisten rapat. Tempelkan kartu NFC untuk bertukar kontak, lalu gunakan aplikasi Cardi MoM di ponsel Anda untuk merekam rapat, mentranskripsikan percakapan, dan menyinkronkan tugas secara otomatis.
+          </p>
+
+          {/* Download Action Buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
+            <a
+              href="https://play.google.com/store/apps/details?id=com.cardinusantara.cardiagentaimom&pcampaignid=web_share"
+              target="_blank"
+              rel="noreferrer"
+              className={`px-5 py-3.5 rounded-2xl border flex items-center gap-3.5 transition group hover:-translate-y-0.5 shadow-sm ${
+                isDark
+                  ? "bg-white/5 border-white/12 hover:bg-white/10 text-white"
+                  : "bg-white border-[#E6ECF7] hover:border-blue-400 text-slate-900"
+              }`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/google-play-badge.svg" alt="Google Play Store" className="h-9 w-auto" />
+              <div className="text-left">
+                <div className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span>Resmi Play Store</span>
+                  <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition" />
+                </div>
+                <div className="text-xs font-black">Unduh untuk Android</div>
+              </div>
+            </a>
+
+            <a
+              href="https://apps.apple.com/us/app/cardi-mom/id6809435140"
+              target="_blank"
+              rel="noreferrer"
+              className={`px-5 py-3.5 rounded-2xl border flex items-center gap-3.5 transition group hover:-translate-y-0.5 shadow-sm ${
+                isDark
+                  ? "bg-white/5 border-white/12 hover:bg-white/10 text-white"
+                  : "bg-white border-[#E6ECF7] hover:border-blue-400 text-slate-900"
+              }`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/app-store-badge.svg" alt="Apple App Store" className="h-9 w-auto" />
+              <div className="text-left">
+                <div className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span>Resmi App Store</span>
+                  <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition" />
+                </div>
+                <div className="text-xs font-black">Unduh untuk iOS</div>
+              </div>
+            </a>
+          </div>
+
+          {/* Feature Banner Backdrop */}
+          <div className="mb-8 rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 shadow-xl max-w-4xl mx-auto bg-slate-950">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/previews/header-mom.webp"
+              alt="Cardi Agent MoM Overview"
+              className="w-full h-auto object-cover block"
+              loading="lazy"
+            />
+          </div>
+
+          {/* Screenshot Gallery Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5 max-w-4xl mx-auto">
+            {[
+              { src: "/previews/1.webp", title: "Rekam Rapat", desc: "Chunk audio otomatis" },
+              { src: "/previews/2.webp", title: "Transkrip AI", desc: "Deteksi multi-speaker" },
+              { src: "/previews/3.webp", title: "Ringkasan", desc: "Poin keputusan utama" },
+              { src: "/previews/4.webp", title: "Action Items", desc: "PIC & tenggat waktu" },
+              { src: "/previews/5.webp", title: "Ekspor & Share", desc: "Kirim ke WA & Email" },
+            ].map((slide, idx) => (
+              <div
+                key={idx}
+                className="group rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 hover:border-sky-500/50 transition flex flex-col"
+              >
+                <div className="aspect-[9/16] overflow-hidden bg-slate-900">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={slide.src}
+                    alt={slide.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="p-2 text-center bg-white dark:bg-[#0A1020]">
+                  <div className="text-[11px] font-bold text-slate-900 dark:text-white truncate">
+                    {slide.title}
+                  </div>
+                  <div className="text-[9px] text-slate-500 dark:text-slate-400 truncate">
+                    {slide.desc}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Security & Offline Badge */}
+          <div className="flex flex-wrap items-center justify-center gap-6 mt-8 text-xs text-slate-500 dark:text-slate-400">
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              <span>Enkripsi AES-256 Sesuai Regulasi PDP</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span>Bisa Rekam Offline Tanpa Sinyal</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-emerald-500" />
+              <span>Model Bahasa Indonesia Akurat</span>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* 10. COMPREHENSIVE RICH FOOTER (Matched to aiagent main & mom.astro) */}
+      <footer
+        className={`border-t py-14 text-xs transition-colors ${
+          isDark
+            ? "border-white/10 bg-[#05080E] text-slate-400"
+            : "border-[#E6ECF7] bg-white text-[#3D4B6B]"
+        }`}
+      >
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-slate-200 dark:border-white/10">
+            {/* Col 1: Brand Info */}
+            <div className="space-y-3">
+              <CardiMomLogo size="sm" colorMode={isDark ? "dark" : "light"} />
+              <p className="text-xs leading-relaxed opacity-80">
+                Solusi AI Meeting Intelligence dan Smart Business Card NFC pertama di Indonesia. Mengubah setiap percakapan rapat menjadi tindakan nyata.
               </p>
-              <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-[11px] font-semibold text-[#00C2D1]">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Enkripsi Standar Korporasi · Data Rapat Aman</span>
+              <div className="pt-2 text-[11px] opacity-70">
+                <p className="font-semibold text-slate-900 dark:text-white">PT Digital Cardi Nusantara</p>
+                <p>Jakarta Selatan, DKI Jakarta 12190</p>
+                <p className="mt-1">Email: contact@cardi.co.id</p>
               </div>
             </div>
 
-            <div className="md:col-span-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-4">Navigasi</h4>
-              <ul className="space-y-2 text-xs text-white/70">
-                <li><a href="#fitur-nfc" className="hover:text-white transition">Fitur Kartu</a></li>
-                <li><a href="#cara-kerja" className="hover:text-white transition">Alur Rapat AI</a></li>
-                <li><a href="#hardware-card" className="hover:text-white transition">Spesifikasi Chip</a></li>
-                <li><a href="#harga" className="hover:text-white transition">Skema Koin</a></li>
+            {/* Col 2: Produk Ekosistem */}
+            <div className="space-y-2.5">
+              <h4 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider">
+                Produk Ekosistem
+              </h4>
+              <ul className="space-y-1.5 opacity-80">
+                <li><Link href="/dashboard/card" className="hover:text-sky-600 transition">Cardi Smart NFC Card</Link></li>
+                <li><Link href="/dashboard/mom" className="hover:text-sky-600 transition">Cardi MoM AI Assistant</Link></li>
+                <li><Link href="/dashboard/calendar" className="hover:text-sky-600 transition">Google Calendar Sync</Link></li>
+                <li><Link href="/dashboard/wallet" className="hover:text-sky-600 transition">Sistem Koin &amp; Dompet</Link></li>
               </ul>
             </div>
 
-            <div className="md:col-span-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-4">Aplikasi &amp; Demo</h4>
-              <ul className="space-y-2 text-xs text-white/70">
-                <li><Link href="/deo" target="_blank" className="hover:text-white transition">Demo Tap Kartu Deo</Link></li>
-                <li><Link href="/dashboard/card" className="hover:text-white transition">Dashboard Kartu</Link></li>
-                <li><Link href="/dashboard/mom" className="hover:text-white transition">Recorder MoM</Link></li>
-                <li><Link href="/dashboard/wallet" className="hover:text-white transition">Top-Up Koin</Link></li>
+            {/* Col 3: Integrasi & Solusi */}
+            <div className="space-y-2.5">
+              <h4 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider">
+                Integrasi &amp; Hardware
+              </h4>
+              <ul className="space-y-1.5 opacity-80">
+                <li><span>NXP NTAG215 ISO 14443-A</span></li>
+                <li><span>Google OAuth 2.0 &amp; Meet</span></li>
+                <li><span>Ekspor Kontak vCard (.vcf)</span></li>
+                <li><span>Notula WhatsApp Auto Dispatch</span></li>
+                <li><span>Perekam Suara Web Audio API</span></li>
               </ul>
             </div>
 
-            <div className="md:col-span-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-4">Ekosistem Cardi</h4>
-              <ul className="space-y-2 text-xs text-white/70">
-                <li><a href="https://www.cardi.co.id" target="_blank" className="hover:text-white transition">Cardi Indonesia Official</a></li>
-                <li><a href="https://aiagent.cardi.co.id" target="_blank" className="hover:text-white transition">Cardi AI Agent Platform</a></li>
-                <li><a href="https://aiagent.cardi.co.id/mom" target="_blank" className="hover:text-white transition">Cardi MoM Web Landing</a></li>
-                <li><a href="https://wa.me/6281283625471" target="_blank" className="hover:text-white transition">WhatsApp Support Tim</a></li>
+            {/* Col 4: Navigasi & Keamanan */}
+            <div className="space-y-2.5">
+              <h4 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider">
+                Akses &amp; Layanan
+              </h4>
+              <ul className="space-y-1.5 opacity-80">
+                <li><Link href="/activate" className="hover:text-sky-600 transition">Aktivasi Kartu Baru</Link></li>
+                <li><Link href="/login" className="hover:text-sky-600 transition">Login Akun Google</Link></li>
+                <li><Link href="/deo" className="hover:text-sky-600 transition">Demo Hasil Tap Kartu</Link></li>
+                <li><a href="https://wa.me/6281289895646" target="_blank" rel="noreferrer" className="hover:text-sky-600 transition">Konsultasi via WhatsApp</a></li>
               </ul>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-xs text-white/50">
-            <p>&copy; 2026 PT Cardi Nusantara Indonesia. Seluruh hak cipta dilindungi.</p>
-            <p className="mt-2 sm:mt-0">Ditenagai oleh NXP NTAG215 &amp; Cardi AI Intelligence.</p>
+          {/* Bottom Bar */}
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] opacity-70">
+            <p>&copy; 2026 PT Digital Cardi Nusantara. Seluruh hak cipta dilindungi undang-undang.</p>
+            <div className="flex items-center gap-4 font-semibold">
+              <span className="flex items-center gap-1 text-emerald-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Sistem Operasional Normal</span>
+              </span>
+              <span>•</span>
+              <span>Enkripsi TLS 256-Bit</span>
+            </div>
           </div>
         </div>
       </footer>
-
     </div>
   );
 }

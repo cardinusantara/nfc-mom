@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Mic,
   Square,
@@ -13,331 +13,469 @@ import {
   User,
   X,
   Volume2,
+  Play,
+  Pause,
+  ExternalLink,
+  Share2,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
-import { cardiApi } from "@/lib/api";
 import { Meeting } from "@/lib/types";
 
 interface AudioRecordModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultAttendee?: string;
+  defaultTitle?: string;
 }
 
 export default function AudioRecordModal({
   isOpen,
   onClose,
   defaultAttendee,
+  defaultTitle,
 }: AudioRecordModalProps) {
-  const { account, addMeeting, deductCoins } = useAppStore();
+  const { sessionToken, addMeeting, deductCoins, cardProfile } = useAppStore();
 
   const [title, setTitle] = useState(
-    defaultAttendee ? `Rapat dengan ${defaultAttendee}` : "Rapat Diskusi Bisnis & Kemitraan"
+    defaultTitle ||
+      (defaultAttendee
+        ? `Rapat dengan ${defaultAttendee}`
+        : "Rapat Diskusi Bisnis & Kemitraan")
   );
-  const [attendees, setAttendees] = useState(defaultAttendee || "Deo Cardi Nathanael, Tamu");
+  const [attendees, setAttendees] = useState(
+    defaultAttendee || `${cardProfile.fullName || "Deo Cardi Nathanael"}, Rekan Bisnis`
+  );
+
+  // Audio recording states
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
-  const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
-  // Processing state: 'idle' | 'recording' | 'uploading' | 'transcribing' | 'done'
-  const [step, setStep] = useState<"idle" | "recording" | "uploading" | "transcribing" | "done">("idle");
+  // Live waveform animation
+  const [volumeLevel, setVolumeLevel] = useState(0);
+
+  // Step flow: 'idle' | 'recording' | 'processing' | 'done'
+  const [step, setStep] = useState<"idle" | "recording" | "processing" | "done">("idle");
   const [createdMeeting, setCreatedMeeting] = useState<Meeting | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Refs for media stream & timer
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (defaultAttendee) {
+      setAttendees(`${cardProfile.fullName || "Deo Cardi Nathanael"}, ${defaultAttendee}`);
+      setTitle(`Rapat dengan ${defaultAttendee}`);
+    }
+  }, [defaultAttendee, cardProfile.fullName]);
 
   useEffect(() => {
     return () => {
-      if (timer) clearInterval(timer);
+      stopRecordingResources();
     };
-  }, [timer]);
+  }, []);
 
-  if (!isOpen) return null;
-
-  const handleStartRecording = () => {
-    setIsRecording(true);
-    setStep("recording");
-    setDuration(0);
-    const interval = setInterval(() => {
-      setDuration((prev) => prev + 1);
-    }, 1000);
-    setTimer(interval);
-  };
-
-  const handleStopAndProcess = async () => {
-    if (timer) clearInterval(timer);
-    setIsRecording(false);
-    setStep("uploading");
-
-    try {
-      // 1. In production: get presigned URL & upload audio file
-      const audioBlob = new Blob(["audio-sample"], { type: "audio/m4a" });
-      const presigned = await cardiApi.getUploadPresignedUrl("recording.m4a");
-      await cardiApi.uploadAudioToS3(presigned.uploadUrl, audioBlob);
-
-      // 2. Start transcription & AI MoM generation
-      setStep("transcribing");
-      const meetingResult = await cardiApi.createMeeting({
-        title,
-        attendees,
-        durationMinutes: Math.max(1, Math.ceil(duration / 60)),
-        audioKey: presigned.key,
-      });
-
-      // 3. Deduct coin for AI processing (5 coins per meeting)
-      deductCoins(5);
-
-      // 4. Save to global state
-      addMeeting(meetingResult);
-      setCreatedMeeting(meetingResult);
-      setStep("done");
-    } catch {
-      // Fallback local mock meeting
-      const fallbackMeeting: Meeting = {
-        id: `mtg_${Date.now()}`,
-        title,
-        titleIsDefault: false,
-        date: new Date().toISOString().split("T")[0],
-        startTime: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
-        durationMinutes: Math.max(1, Math.ceil(duration / 60)),
-        attendees,
-        location: "Pertemuan Tatap Muka",
-        status: "ready",
-        failedStage: null,
-        failureReason: null,
-        mom: {
-          shortSummary: `Diskusi strategis mengenai kerja sama kartu NFC bisnis dan notula rapat AI MoM.`,
-          executiveSummary: `Rapat berhasil menyepakati integrasi profil kartu nama digital dengan sistem rekaman otomatis Cardi MoM. Kedua pihak sepakat untuk memulai uji coba implementasi.`,
-          discussionPoints: [
-            {
-              topic: "Rencana Kolaborasi NFC & MoM",
-              detail: "Pembahasan integrasi alur tap kartu bisnis langsung memicu rekaman meeting.",
-              sourceMs: [3000, 15000],
-            },
-            {
-              topic: "Penetapan Timeline",
-              detail: "Pengujian fungsionalitas pairing QR dan email OTP sebelum peluncuran resmi.",
-              sourceMs: [16000, 32000],
-            },
-          ],
-          decisions: [
-            {
-              text: "Gunakan saldo koin terpadu untuk kartu NFC dan rekaman transkripsi MoM.",
-              sourceMs: [25000],
-            },
-          ],
-          actionItems: [
-            {
-              item: "Kirimkan proposal kerjasama & penawaran paket kartu bisnis",
-              owner: "Deo Cardi",
-              dueDate: new Date(Date.now() + 86400000 * 2).toISOString().split("T")[0],
-              dueDateText: "2 hari lagi",
-              sourceMs: [45000],
-            },
-            {
-              item: "Jadwalkan demo teknis bersama tim engineering",
-              owner: "Tamu",
-              dueDate: new Date(Date.now() + 86400000 * 4).toISOString().split("T")[0],
-              dueDateText: "4 hari lagi",
-              sourceMs: [50000],
-            },
-          ],
-          openIssues: [],
-          nextSteps: [{ text: "Follow-up melalui WhatsApp dalam 48 jam", sourceMs: [] }],
-          model: "gpt-4o-transcribe-v2",
-          promptVersion: "1.2.0",
-        },
-        momReadAt: null,
-        updatedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      };
-      deductCoins(5);
-      addMeeting(fallbackMeeting);
-      setCreatedMeeting(fallbackMeeting);
-      setStep("done");
+  const stopRecordingResources = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+      audioContextRef.current.close().catch(() => {});
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
     }
   };
 
-  const formatTimer = (sec: number) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  if (!isOpen) return null;
+
+  // 1. Start live audio recording
+  const handleStartRecording = async () => {
+    setErrorMessage(null);
+    audioChunksRef.current = [];
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Audio analysis for real-time waveform
+      try {
+        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const ctx = new AudioCtx();
+        audioContextRef.current = ctx;
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 64;
+        analyserRef.current = analyser;
+
+        const source = ctx.createMediaStreamSource(stream);
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const updateVolume = () => {
+          if (!analyserRef.current) return;
+          analyserRef.current.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+          }
+          const avg = sum / dataArray.length;
+          setVolumeLevel(Math.min(100, Math.round((avg / 128) * 100)));
+          animationFrameRef.current = requestAnimationFrame(updateVolume);
+        };
+        updateVolume();
+      } catch (err) {
+        console.warn("Analyser not supported, falling back to simulated wave", err);
+      }
+
+      // MediaRecorder initialization
+      let mimeType = "audio/webm;codecs=opus";
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = "audio/webm";
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = "";
+        }
+      }
+
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.start(250);
+      setIsRecording(true);
+      setStep("recording");
+      setDuration(0);
+
+      const interval = setInterval(() => {
+        setDuration((prev) => prev + 1);
+      }, 1000);
+      timerRef.current = interval;
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      setErrorMessage(
+        "Izin mikrofon diperlukan untuk merekam. Mohon izinkan akses mikrofon di peramban Anda."
+      );
+    }
+  };
+
+  // 2. Stop recording and execute AI processing pipeline
+  const handleStopAndProcess = async () => {
+    stopRecordingResources();
+    setIsRecording(false);
+    setStep("processing");
+
+    let finalAudioUrl: string | null = null;
+    if (audioChunksRef.current.length > 0) {
+      const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      finalAudioUrl = URL.createObjectURL(blob);
+      setAudioUrl(finalAudioUrl);
+    }
+
+    try {
+      // Call production endpoint /api/mom/record
+      const res = await fetch("/api/mom/record", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title || "Rapat Notula MoM",
+          attendees,
+          durationMinutes: Math.max(1, Math.ceil(duration / 60)),
+          token: sessionToken,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal memproses rapat");
+
+      const meetingWithAudio: Meeting = {
+        ...data.meeting,
+        audioUrl: finalAudioUrl,
+      };
+
+      // Deduct coins for transcription (5 coins)
+      deductCoins(5, `Transkripsi MoM AI: ${title}`);
+
+      // Add to store
+      addMeeting(meetingWithAudio);
+      setCreatedMeeting(meetingWithAudio);
+      setStep("done");
+    } catch (err: unknown) {
+      console.error("Error processing MoM:", err);
+      setErrorMessage("Gagal menyelesaikan transkripsi AI. Silakan coba kembali.");
+      setStep("idle");
+    }
+  };
+
+  const formatSeconds = (sec: number) => {
+    const mins = Math.floor(sec / 60);
+    const remainingSecs = sec % 60;
+    return `${mins.toString().padStart(2, "0")}:${remainingSecs.toString().padStart(2, "0")}`;
+  };
+
+  const togglePlayback = () => {
+    if (!audioElementRef.current) return;
+    if (isPlayingAudio) {
+      audioElementRef.current.pause();
+      setIsPlayingAudio(false);
+    } else {
+      audioElementRef.current.play();
+      setIsPlayingAudio(true);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-[#18181b] border border-white/15 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150 text-white">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-[#0D1829] border border-white/15 w-full max-w-lg rounded-3xl p-6 sm:p-7 shadow-2xl relative text-white animate-in zoom-in-95 duration-200">
+        
+        {/* Close Button */}
         <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-white/50 hover:text-white transition"
+          onClick={() => {
+            stopRecordingResources();
+            onClose();
+          }}
+          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 flex items-center justify-center text-white/70 hover:text-white transition"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
-        {/* Modal Header */}
+        {/* Header */}
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-xl bg-[#3b7cfa]/20 border border-[#3b7cfa]/40 flex items-center justify-center text-[#3b7cfa]">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#0284c7] to-[#38bdf8] flex items-center justify-center text-white shadow-lg shadow-sky-500/20">
             <Mic className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white">
-              Rekam Pertemuan &bull; Cardi MoM
+            <h2 className="text-lg font-bold tracking-tight">
+              {step === "done" ? "Notula AI Siap Digunakan" : "Perekam Suara Rapat MoM"}
             </h2>
-            <p className="text-xs text-white/60">
-              Biaya 5 koin per notula &bull; Saldo saat ini: {account.coinBalance} koin
+            <p className="text-xs text-slate-400">
+              {step === "done"
+                ? "Tersinkronisasi otomatis dengan aplikasi mobile Cardi MoM"
+                : "Langsung ditranskripsi & diekstrak ringkasan eksekutifnya"}
             </p>
           </div>
         </div>
 
-        {/* Content based on state */}
+        {errorMessage && (
+          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/40 rounded-xl text-xs text-red-200">
+            {errorMessage}
+          </div>
+        )}
+
+        {/* STEP 1: IDLE / CONFIGURATION */}
         {step === "idle" && (
           <div className="space-y-4">
             <div>
-              <label className="text-[11px] font-semibold text-white/60 uppercase tracking-wider block mb-1.5">
-                Judul Rapat
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                Judul Agenda Pertemuan
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-[#242429] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-[#3b7cfa]"
+                placeholder="Contoh: Diskusi Penjualan Kemitraan"
+                className="w-full bg-[#070F1E] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-white/60 uppercase tracking-wider block mb-1.5">
-                Peserta Rapat
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                Peserta Pertemuan
               </label>
               <input
                 type="text"
                 value={attendees}
                 onChange={(e) => setAttendees(e.target.value)}
-                placeholder="Pisahkan dengan koma"
-                className="w-full bg-[#242429] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-[#3b7cfa]"
+                placeholder="Deo Cardi Nathanael, Budi"
+                className="w-full bg-[#070F1E] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition"
               />
             </div>
 
-            <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl flex items-start gap-3">
-              <Sparkles className="w-4 h-4 text-[#3b7cfa] flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-white/70 leading-relaxed">
-                Suara percakapan Anda akan direkam, diunggah secara terenkripsi, lalu dianalisis oleh AI untuk menghasilkan ringkasan eksekutif, poin keputusan, dan action items yang dapat langsung diekspor ke WhatsApp atau PDF.
-              </p>
-            </div>
-
-            {(account.coinBalance ?? 0) < 5 ? (
-              <div className="space-y-2">
-                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-400">
-                  Saldo koin Anda tidak mencukupi untuk membuat notula rapat AI (Dibutuhkan 5 koin).
-                </div>
-                <a
-                  href="/dashboard/wallet"
-                  className="w-full bg-[#f59e0b] hover:bg-[#d97706] text-black py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2"
-                >
-                  Top-up Koin di Sini
-                </a>
+            <div className="bg-sky-500/10 border border-sky-500/20 rounded-2xl p-4 flex items-start gap-3">
+              <Sparkles className="w-5 h-5 text-sky-400 shrink-0 mt-0.5" />
+              <div className="text-xs text-slate-300 leading-relaxed">
+                <span className="font-semibold text-white">Integrasi Penuh Pipeline:</span> Suara akan direkam melalui mikrofon peramban dan langsung dieksekusi oleh mesin AI MoM. Hasilnya otomatis masuk ke dashboard web dan aplikasi mobile Cardi Anda.
               </div>
-            ) : (
-              <button
-                onClick={handleStartRecording}
-                className="w-full bg-[#ef4444] hover:bg-[#dc2626] text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition active:scale-[0.99]"
-              >
-                <Mic className="w-4 h-4" />
-                <span>Mulai Rekaman Suara</span>
-              </button>
-            )}
-          </div>
-        )}
-
-        {step === "recording" && (
-          <div className="flex flex-col items-center text-center py-4">
-            <span className="text-xs font-semibold text-red-400 uppercase tracking-widest flex items-center gap-1.5 mb-2">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-record-dot" />
-              Sedang Merekam Suara Rapat
-            </span>
-
-            {/* Audio Wave Visualizer */}
-            <div className="w-full h-20 bg-black/40 rounded-2xl border border-white/10 flex items-center justify-center gap-1.5 px-4 my-4 overflow-hidden">
-              {Array.from({ length: 24 }).map((_, i) => (
-                <span
-                  key={i}
-                  className="w-1.5 bg-[#3b7cfa] rounded-full animate-wave-bar"
-                  style={{
-                    animationDelay: `${(i % 6) * 0.12}s`,
-                    height: `${Math.max(10, (i * 17) % 36)}px`,
-                  }}
-                />
-              ))}
-            </div>
-
-            <div className="text-3xl font-mono font-black text-white mb-6">
-              {formatTimer(duration)}
             </div>
 
             <button
-              onClick={handleStopAndProcess}
-              className="w-full bg-[#3b7cfa] hover:bg-[#2563eb] text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition"
+              onClick={handleStartRecording}
+              className="w-full bg-gradient-to-r from-[#0284c7] to-[#0ea5e9] hover:from-[#0369a1] hover:to-[#0284c7] text-white py-3.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-sky-600/30 transition cursor-pointer"
             >
-              <Square className="w-4 h-4 fill-white" />
-              <span>Hentikan &amp; Proses Notula AI MoM</span>
+              <Mic className="w-4 h-4 animate-pulse" />
+              <span>Mulai Rekam Percakapan Sekarang</span>
             </button>
           </div>
         )}
 
-        {(step === "uploading" || step === "transcribing") && (
-          <div className="flex flex-col items-center text-center py-8">
-            <Loader2 className="w-10 h-10 text-[#3b7cfa] animate-spin mb-4" />
-            <h3 className="text-sm font-bold text-white mb-1">
-              {step === "uploading"
-                ? "Mengunggah Audio Terenkripsi ke Cloud..."
-                : "AI Agent Sedang Menganalisis Rapat..."}
-            </h3>
-            <p className="text-xs text-white/60 max-w-xs">
-              Mengekstrak ucapan pembicara, ringkasan eksekutif, dan tugas tindak lanjut.
-            </p>
+        {/* STEP 2: LIVE RECORDING */}
+        {step === "recording" && (
+          <div className="text-center py-6 space-y-6">
+            <div className="relative inline-flex items-center justify-center">
+              {/* Outer pulsing ring responsive to volume */}
+              <div
+                className="w-28 h-28 rounded-full bg-sky-500/20 absolute animate-ping duration-1000"
+                style={{ transform: `scale(${1 + volumeLevel / 120})` }}
+              />
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-red-600 to-rose-500 flex items-center justify-center text-white shadow-xl shadow-red-500/40 relative z-10 animate-pulse">
+                <Mic className="w-10 h-10" />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-3xl font-mono font-black text-white tracking-widest">
+                {formatSeconds(duration)}
+              </div>
+              <p className="text-xs text-slate-400 mt-1 flex items-center justify-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                <span>Sedang merekam suara rapat live...</span>
+              </p>
+            </div>
+
+            {/* Dynamic Waveform Visualizer */}
+            <div className="flex items-center justify-center gap-1.5 h-10 px-6">
+              {[40, 65, 85, 30, 95, 55, 75, 45, 90, 60, 35, 80].map((h, i) => {
+                const dynamicHeight = Math.max(
+                  8,
+                  Math.min(38, Math.round((h * (volumeLevel + 30)) / 100))
+                );
+                return (
+                  <span
+                    key={i}
+                    className="w-1.5 bg-gradient-to-t from-sky-500 to-cyan-300 rounded-full transition-all duration-75"
+                    style={{ height: `${dynamicHeight}px` }}
+                  />
+                );
+              })}
+            </div>
+
+            <button
+              onClick={handleStopAndProcess}
+              className="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 transition cursor-pointer"
+            >
+              <Square className="w-4 h-4 fill-white" />
+              <span>Selesai &amp; Proses Notula AI Sekarang</span>
+            </button>
           </div>
         )}
 
-        {step === "done" && createdMeeting && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-[#10b981] font-bold text-xs">
-              <CheckCircle className="w-5 h-5 flex-shrink-0" />
-              <span>Notula Rapat Berhasil Dihasilkan!</span>
+        {/* STEP 3: PROCESSING WITH AI */}
+        {step === "processing" && (
+          <div className="text-center py-8 space-y-4">
+            <div className="w-16 h-16 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-400 flex items-center justify-center mx-auto shadow-inner">
+              <Loader2 className="w-8 h-8 animate-spin" />
             </div>
-
-            <div className="bg-[#242429] border border-white/10 rounded-xl p-4 space-y-2.5">
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-white">{createdMeeting.title}</span>
-                <span className="text-white/50 text-[11px] font-mono">
-                  {createdMeeting.durationMinutes} Menit
-                </span>
-              </div>
-              <p className="text-xs text-white/70 italic border-l-2 border-[#3b7cfa] pl-2.5">
-                &ldquo;{createdMeeting.mom?.shortSummary}&rdquo;
+            <div>
+              <h3 className="text-base font-bold text-white">Memproses Transkripsi Suara &amp; AI MoM</h3>
+              <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                Mengunggah audio rekaman, mentranskripsikan ke teks, dan mengekstrak ringkasan eksekutif serta action items...
               </p>
-              <div className="pt-2 border-t border-white/10">
-                <span className="text-[10px] font-bold uppercase text-white/50 block mb-1">
-                  Action Items ({createdMeeting.mom?.actionItems.length}):
-                </span>
-                <ul className="text-xs space-y-1 text-white/80">
-                  {createdMeeting.mom?.actionItems.map((ai, i) => (
-                    <li key={i} className="flex items-start gap-1.5">
-                      <span className="text-[#3b7cfa] font-bold">&bull;</span>
-                      <span>
-                        {ai.item} <em>({ai.owner || "PIC"})</em>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4: RESULT / DONE */}
+        {step === "done" && createdMeeting && (
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 flex items-center gap-3">
+              <CheckCircle className="w-6 h-6 text-emerald-400 shrink-0" />
+              <div>
+                <div className="text-xs font-bold text-emerald-300">Notula Rapat Berhasil Dibuat!</div>
+                <div className="text-[11px] text-slate-300">
+                  Data telah tersimpan di akun Anda dan dapat langsung diakses di aplikasi Cardi MoM ponsel Anda.
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-2">
+            {/* Audio Playback Element */}
+            {audioUrl && (
+              <div className="bg-[#070F1E] border border-white/10 rounded-2xl p-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={togglePlayback}
+                    className="w-9 h-9 rounded-xl bg-sky-500 hover:bg-sky-400 text-white flex items-center justify-center shadow transition"
+                  >
+                    {isPlayingAudio ? (
+                      <Pause className="w-4 h-4" />
+                    ) : (
+                      <Play className="w-4 h-4 ml-0.5" />
+                    )}
+                  </button>
+                  <div>
+                    <div className="text-xs font-semibold text-white">Rekaman Suara Pertemuan</div>
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      Durasi: {formatSeconds(duration)}
+                    </div>
+                  </div>
+                </div>
+                <audio
+                  ref={audioElementRef}
+                  src={audioUrl}
+                  onEnded={() => setIsPlayingAudio(false)}
+                  className="hidden"
+                />
+                <Volume2 className="w-4 h-4 text-sky-400" />
+              </div>
+            )}
+
+            {/* MoM Preview */}
+            <div className="bg-[#070F1E] border border-white/10 rounded-2xl p-4 space-y-3">
+              <div>
+                <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider">
+                  Ringkasan Eksekutif
+                </span>
+                <p className="text-xs text-slate-200 mt-1 leading-relaxed">
+                  {createdMeeting.mom?.executiveSummary}
+                </p>
+              </div>
+
+              {createdMeeting.mom?.actionItems && createdMeeting.mom.actionItems.length > 0 && (
+                <div>
+                  <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">
+                    Action Items ({createdMeeting.mom.actionItems.length})
+                  </span>
+                  <div className="mt-1 space-y-1.5">
+                    {createdMeeting.mom.actionItems.map((ai, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-white/5 border border-white/5 rounded-xl p-2.5 text-xs flex items-start justify-between gap-2"
+                      >
+                        <span className="text-slate-200">{ai.item}</span>
+                        <span className="bg-sky-500/20 text-sky-300 text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap font-medium">
+                          {ai.owner}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
               <button
                 onClick={onClose}
-                className="w-full bg-[#3b7cfa] hover:bg-[#2563eb] text-white py-2.5 rounded-xl font-bold text-xs transition"
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2.5 px-4 rounded-xl text-xs font-bold transition"
               >
-                Lihat di Daftar Rapat MoM
+                Tutup
               </button>
+              <a
+                href="/dashboard/mom"
+                className="flex-1 bg-gradient-to-r from-sky-500 to-cyan-400 hover:from-sky-600 hover:to-cyan-500 text-slate-900 py-2.5 px-4 rounded-xl text-xs font-bold text-center transition shadow-lg shadow-sky-500/20"
+              >
+                Lihat di Dashboard MoM
+              </a>
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

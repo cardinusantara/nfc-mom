@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cardi NFC MoM  -  Standalone NFC Digital Portal (`nfc.cardi.co.id`)
 
-## Getting Started
+Canonical digital identity and NFC smart card portal for the Cardi MoM ecosystem.
 
-First, run the development server:
+## Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Framework**: [Next.js 16 (App Router)](https://nextjs.org/) with React 19 & Turbopack
+- **Styling**: Tailwind CSS & Lucide React icons
+- **Backend API**: Centralized AWS DynamoDB & API Gateway (`mom app/packages/backend`)
+
+## Architecture & Core Features
+
+```
+nfc mom/
+├── src/
+│   ├── app/
+│   │   ├── [username]/           # Dynamic public vCard profile with live tap tracking
+│   │   ├── activate/             # Card activation with automatic coin crediting
+│   │   ├── dashboard/card/       # Digital card management & customization
+│   │   ├── api/vcard/[username]/ # Serverless RFC 6350 .vcf contact card download
+│   │   └── ...
+│   └── lib/
+│       ├── api.ts                # Client API adapter connected to AWS backend
+│       └── profiles.ts           # Types & utilities
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Core Flows
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Card Tap (`/[username]`)**:
+   - NFC card or QR code redirects to `https://nfc.cardi.co.id/<username>`.
+   - Fires background tap counter to `POST /nfc/profile/:username/tap`.
+   - Displays verified badges, social links, bio, and downloadable `.vcf`.
+   - Displays friendly empty state if the card has not yet been registered.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. **Card Activation (`/activate`)**:
+   - Accepts Card ID, Email (MoM Account), Full Name, Desired Username, and Selected Package.
+   - Packages:
+     - **Kartu Saja**: Rp 49.000 (Physical NFC Card only)
+     - **Kartu + Quick**: Rp 139.000 (Includes 500 MoM Coins)
+     - **Kartu + Bulk**: Rp 399.000 (Includes 2,500 MoM Coins)
+   - Synchronizes with DynamoDB and automatically provisions coin balance to the user's MoM account.
 
-## Learn More
+3. **Digital Profile Editor (`/dashboard/card`)**:
+   - Authenticated users can modify display name, role, company, bio, phone, email, and social links in real time.
 
-To learn more about Next.js, take a look at the following resources:
+## Available Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# Start Next.js development server
+pnpm dev
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Build production application with Turbopack
+pnpm build
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Start production server
+pnpm start
+```
