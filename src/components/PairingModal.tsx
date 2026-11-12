@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { cardiApi } from "@/lib/api";
+import { Meeting } from "@/lib/types";
 
 interface PairingModalProps {
   isOpen: boolean;
@@ -22,7 +23,7 @@ interface PairingModalProps {
 }
 
 export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
-  const { account, setPairedApp, updateCoinBalance } = useAppStore();
+  const { account, setPairedApp, updateCoinBalance, setMeetings } = useAppStore();
   const [tab, setTab] = useState<"qr" | "email">("qr");
 
   // Real QR Pairing State
@@ -80,7 +81,21 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
             });
             const coins = pollRes.account.coinsBalance ?? pollRes.account.coinBalance ?? 0;
             updateCoinBalance(coins);
-            setSuccessMessage("Aplikasi Cardi MoM berhasil terhubung! Koin disinkronkan.");
+
+            // Sync live meetings from mobile app
+            try {
+              const syncRes = await cardiApi.syncMeetings();
+              if (syncRes.entries) {
+                const liveMeetings = syncRes.entries
+                  .filter((e) => !e.deleted && e.meeting)
+                  .map((e) => (e as { deleted: false; meeting: Meeting }).meeting);
+                setMeetings(liveMeetings);
+              }
+            } catch {
+              // ignore
+            }
+
+            setSuccessMessage("Aplikasi Cardi MoM berhasil terhubung! Koin dan rekaman disinkronkan.");
             setTimeout(() => {
               setSuccessMessage(null);
               onClose();

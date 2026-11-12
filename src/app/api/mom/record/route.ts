@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
         actionItems: [
           {
             item: `Kirimkan proposal kerjasama teknis dan proposal harga paket tim kepada ${attendees.split(",")[0] || "klien"}.`,
-            owner: "Deo Cardi Nathanael",
+            owner: attendees.split(",")[0]?.trim() || "PIC",
             dueDate: new Date(Date.now() + 2 * 86400000).toISOString().split("T")[0],
             dueDateText: "2 hari lagi",
             sourceMs: [60000],

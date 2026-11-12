@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { cardiApi } from "@/lib/api";
-import { UserAccount } from "@/lib/types";
+import { UserAccount, Meeting } from "@/lib/types";
 import { CardiMomLogo } from "@/components/CardiMomLogo";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 
@@ -29,6 +29,7 @@ export default function LoginPage() {
   const {
     setSession,
     loginWithGoogle,
+    setMeetings,
     theme,
     toggleTheme,
     locale,
@@ -91,6 +92,20 @@ export default function LoginPage() {
             stopPolling();
             cardiApi.setToken(pollRes.sessionToken);
             setSession(pollRes.sessionToken, pollRes.account);
+
+            // Sync live meetings from mobile app immediately
+            try {
+              const syncData = await cardiApi.syncMeetings();
+              if (syncData.entries) {
+                const liveMeetings = syncData.entries
+                  .filter((e) => !e.deleted && e.meeting)
+                  .map((e) => (e as { deleted: false; meeting: Meeting }).meeting);
+                setMeetings(liveMeetings);
+              }
+            } catch {
+              // sync will retry on dashboard mount
+            }
+
             setSuccessMessage("Perangkat aplikasi mobile berhasil tersambung!");
             setTimeout(() => {
               router.push("/dashboard/card");
@@ -112,7 +127,7 @@ export default function LoginPage() {
     } finally {
       setIsLoadingPairing(false);
     }
-  }, [router, setSession, stopPolling]);
+  }, [router, setMeetings, setSession, stopPolling]);
 
   useEffect(() => {
     if (authMethod === "qr") {
@@ -133,7 +148,7 @@ export default function LoginPage() {
   };
 
   // Handle Google Sign In Success
-  const handleGoogleSuccess = (userData: {
+  const handleGoogleSuccess = async (userData: {
     email: string;
     name: string;
     avatarUrl?: string;
@@ -156,6 +171,18 @@ export default function LoginPage() {
         },
         userData.sessionToken
       );
+    }
+
+    try {
+      const syncData = await cardiApi.syncMeetings();
+      if (syncData.entries) {
+        const liveMeetings = syncData.entries
+          .filter((e) => !e.deleted && e.meeting)
+          .map((e) => (e as { deleted: false; meeting: Meeting }).meeting);
+        setMeetings(liveMeetings);
+      }
+    } catch {
+      // ignore transient sync error
     }
 
     setSuccessMessage(`Berhasil masuk sebagai ${userData.name}!`);
@@ -196,6 +223,19 @@ export default function LoginPage() {
       const res = await cardiApi.verifyEmailCode(email, otpCode, "web_nfc_portal");
       cardiApi.setToken(res.token);
       setSession(res.token, res.account);
+
+      try {
+        const syncData = await cardiApi.syncMeetings();
+        if (syncData.entries) {
+          const liveMeetings = syncData.entries
+            .filter((e) => !e.deleted && e.meeting)
+            .map((e) => (e as { deleted: false; meeting: Meeting }).meeting);
+          setMeetings(liveMeetings);
+        }
+      } catch {
+        // ignore
+      }
+
       setSuccessMessage(`Berhasil masuk sebagai ${res.account.email}!`);
       setTimeout(() => {
         router.push("/dashboard/card");

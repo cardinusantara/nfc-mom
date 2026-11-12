@@ -1,19 +1,26 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import PairingModal from "@/components/PairingModal";
 import AudioRecordModal from "@/components/AudioRecordModal";
 import { useAppStore } from "@/lib/store";
+import { cardiApi } from "@/lib/api";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { theme } = useAppStore();
+  const { theme, sessionToken } = useAppStore();
   const [pairingModalOpen, setPairingModalOpen] = useState(false);
   const [recordModalOpen, setRecordModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (sessionToken) {
+      cardiApi.setToken(sessionToken);
+    }
+  }, [sessionToken]);
 
   return (
     <div

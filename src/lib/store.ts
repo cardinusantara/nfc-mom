@@ -105,150 +105,6 @@ const CLEAN_CARD_PROFILE: CardProfile = {
   },
 };
 
-const DEFAULT_CARD_PROFILE: CardProfile = {
-  username: "deo",
-  fullName: "Deo Cardi Nathanael",
-  headline: "Founder & Chief Executive Officer",
-  company: "Cardi Nusantara AI",
-  phone: "+62 812-8899-0011",
-  email: "deo@cardi.co.id",
-  website: "https://cardi.co.id",
-  location: "Jakarta, Indonesia",
-  bio: "Membangun ekosistem AI Meeting Intelligence dan Smart NFC Networking generasi baru di Indonesia.",
-  avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
-  cardDesign: "black-gold",
-  socials: {
-    whatsapp: "https://wa.me/6281288990011",
-    linkedin: "https://linkedin.com/in/deocardi",
-    instagram: "https://instagram.com/deocardi",
-    github: "https://github.com/cardinusantara",
-  },
-  metrics: {
-    totalTaps: 320,
-    contactsSaved: 215,
-    momInitiated: 64,
-  },
-};
-
-const INITIAL_MEETINGS: Meeting[] = [
-  {
-    id: "mtg_init_1",
-    title: "Rapat Kemitraan Eksekutif Cardi Smart NFC & AI MoM",
-    titleIsDefault: false,
-    date: "2026-11-06",
-    startTime: "14:00",
-    durationMinutes: 28,
-    attendees: "Deo Cardi Nathanael, Tim Bisnis & Mitra Strategis",
-    location: "Pertemuan Tatap Muka (NFC Tap)",
-    status: "ready",
-    failedStage: null,
-    failureReason: null,
-    momReadAt: null,
-    updatedAt: "2026-11-06T14:35:00Z",
-    createdAt: "2026-11-06T14:00:00Z",
-    mom: {
-      shortSummary: "Pembahasan integrasi kartu bisnis digital NFC dengan asisten transkripsi notulen AI Cardi MoM untuk eksekutif perusahaan.",
-      executiveSummary: "Pertemuan menyepakati percepatan transisi dari kartu nama konvensional menuju Cardi Smart NFC Card. Fitur pencatatan otomatis AI MoM dinilai sangat menghemat waktu follow-up dan mempermudah delegasi tugas tim.",
-      discussionPoints: [
-        {
-          topic: "Efisiensi Pertukaran Kontak Tanpa Aplikasi",
-          detail: "Lawan bicara dapat langsung menyimpan profil (.vcf) dan nomor WhatsApp hanya dengan sekali tap kartu fisik ke smartphone.",
-          sourceMs: [0, 30000],
-        },
-        {
-          topic: "Otomatisasi Notulen Rapat & Action Items",
-          detail: "Transkripsi AI mengekstrak keputusan penting dan memetakan tugas ke PIC masing-masing secara real-time.",
-          sourceMs: [30000, 60000],
-        },
-        {
-          topic: "Sinkronisasi Google Calendar Dua Arah",
-          detail: "Action items dari hasil rapat langsung dijadwalkan ke Google Calendar kedua belah pihak.",
-          sourceMs: [60000, 90000],
-        },
-      ],
-      decisions: [
-        {
-          text: "Menggunakan Cardi Smart NFC Card sebagai standar networking eksekutif tim.",
-          sourceMs: [25000],
-        },
-        {
-          text: "Menjadwalkan sesi onboarding dan aktivasi kartu batch pertama.",
-          sourceMs: [55000],
-        },
-      ],
-      actionItems: [
-        {
-          item: "Kirimkan proposal teknis dan invoice paket tim eksekutif.",
-          owner: "Deo Cardi Nathanael",
-          dueDate: "2026-11-08",
-          dueDateText: "2 hari lagi",
-          sourceMs: [45000],
-        },
-        {
-          item: "Jadwalkan sesi onboarding via Google Meet.",
-          owner: "Tim Mitra",
-          dueDate: "2026-11-10",
-          dueDateText: "4 hari lagi",
-          sourceMs: [80000],
-        },
-      ],
-      openIssues: [],
-      nextSteps: [
-        {
-          text: "Kirimkan ringkasan notulen ke grup WhatsApp peserta rapat.",
-          sourceMs: [85000],
-        },
-      ],
-      model: "cardi-ai-voice-v2",
-      promptVersion: "2.4",
-    },
-  },
-];
-
-const INITIAL_CONTACTS: ContactLead[] = [
-  {
-    id: "lead_1",
-    name: "Budi Santoso",
-    company: "PT Mandiri Digital Nusantara",
-    phone: "+62 812-9988-7766",
-    email: "budi.santoso@mandiridigital.id",
-    tappedAt: "Kemarin, 14:20",
-    createdAt: "2026-11-05T14:20:00Z",
-    status: "hot",
-    notes: "Tertarik implementasi 50 kartu NFC untuk tim sales & business development.",
-  },
-  {
-    id: "lead_2",
-    name: "Siti Rahmawati",
-    company: "Inovasi Retail Indonesia",
-    phone: "+62 813-1122-3344",
-    email: "siti.rahma@innovretail.co.id",
-    tappedAt: "3 hari lalu",
-    createdAt: "2026-11-03T10:15:00Z",
-    status: "warm",
-    notes: "Follow-up proposal paket Starter dan integrasi WhatsApp.",
-  },
-];
-
-const INITIAL_TRANSACTIONS: CoinTransaction[] = [
-  {
-    id: "tx_init_1",
-    type: "topup",
-    amount: 250,
-    service: "topup_pack",
-    description: "Bonus Aktivasi Paket Executive NFC Card (250 Koin)",
-    createdAt: "2026-11-04T09:00:00Z",
-  },
-  {
-    id: "tx_init_2",
-    type: "usage",
-    amount: -5,
-    service: "mom_transcribe",
-    description: "Transkripsi AI: Rapat Kemitraan Eksekutif Cardi",
-    createdAt: "2026-11-06T14:35:00Z",
-  },
-];
-
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -256,21 +112,39 @@ export const useAppStore = create<AppState>()(
       account: CLEAN_ACCOUNT,
       sessionToken: null,
       setSession: (token, account) => {
-        const existingProfile = get().cardProfile;
         const usernameClean = account.email
           ? account.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "")
-          : existingProfile.username;
-        const updatedCardProfile: CardProfile = {
-          ...existingProfile,
-          fullName: account.name || existingProfile.fullName || usernameClean,
-          email: account.email || existingProfile.email,
-          username: existingProfile.username || usernameClean,
-          avatarUrl: account.avatarUrl || existingProfile.avatarUrl || "",
-        };
+          : "";
+        const defaultName = account.email
+          ? account.email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+          : "";
+        const existingProfile = get().cardProfile;
+        const isSameUser = existingProfile.email === account.email && existingProfile.email !== "";
+
+        const updatedCardProfile: CardProfile = isSameUser
+          ? {
+              ...existingProfile,
+              fullName: account.name || existingProfile.fullName || defaultName,
+              email: account.email || existingProfile.email,
+              avatarUrl: account.avatarUrl || existingProfile.avatarUrl || "",
+            }
+          : {
+              ...CLEAN_CARD_PROFILE,
+              fullName: account.name || defaultName,
+              email: account.email,
+              username: usernameClean,
+              avatarUrl: account.avatarUrl || "",
+              headline: "Pengguna Ekosistem Cardi",
+              company: "Cardi Network",
+              location: "Indonesia",
+              website: "https://cardi.co.id",
+            };
+
         set({
           sessionToken: token,
           account: {
             ...account,
+            name: account.name || defaultName,
             coinBalance: account.coinsBalance ?? account.coinBalance ?? 0,
           },
           cardProfile: updatedCardProfile,
@@ -278,14 +152,13 @@ export const useAppStore = create<AppState>()(
       },
 
       loginWithGoogle: (profile, token) => {
-        const usernameClean = profile.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
-        const newAccount: UserAccount = {
+        const cleanAccount: UserAccount = {
           email: profile.email,
           name: profile.name,
           avatarUrl: profile.avatarUrl || "",
-          coinsBalance: 60,
-          coinBalance: 60,
-          freemiumGranted: true,
+          coinsBalance: 0,
+          coinBalance: 0,
+          freemiumGranted: false,
           subscription: {
             status: "none",
             tier: null,
@@ -293,27 +166,20 @@ export const useAppStore = create<AppState>()(
           },
           pairedApp: null,
         };
-
-        const existingProfile = get().cardProfile;
-        const updatedCardProfile: CardProfile = {
-          ...existingProfile,
-          fullName: profile.name || existingProfile.fullName,
-          email: profile.email || existingProfile.email,
-          username: existingProfile.username || usernameClean,
-          avatarUrl: profile.avatarUrl || existingProfile.avatarUrl || "",
-        };
-
-        set({
-          account: newAccount,
-          sessionToken: token,
-          cardProfile: updatedCardProfile,
-        });
+        get().setSession(token, cleanAccount);
       },
 
       logout: () => {
         set({
           sessionToken: null,
           account: CLEAN_ACCOUNT,
+          cardProfile: CLEAN_CARD_PROFILE,
+          meetings: [],
+          contacts: [],
+          leads: [],
+          calendarEvents: [],
+          transactions: [],
+          coinHistory: [],
         });
       },
 
@@ -321,8 +187,8 @@ export const useAppStore = create<AppState>()(
         set({
           account: CLEAN_ACCOUNT,
           sessionToken: null,
-          cardProfile: DEFAULT_CARD_PROFILE,
-          meetings: INITIAL_MEETINGS,
+          cardProfile: CLEAN_CARD_PROFILE,
+          meetings: [],
           contacts: [],
           leads: [],
           transactions: [],
@@ -344,27 +210,27 @@ export const useAppStore = create<AppState>()(
         })),
 
       deductCoins: (amount, reason) => {
-        const current = get().account.coinsBalance ?? get().account.coinBalance ?? 0;
-        if (current < amount) return false;
+        const currentBalance = get().account.coinBalance ?? get().account.coinsBalance ?? 0;
+        if (currentBalance < amount) return false;
+
+        const newBalance = currentBalance - amount;
         const newTx: CoinTransaction = {
           id: `tx_${Date.now()}`,
           type: "usage",
-          amount,
+          amount: -amount,
           service: "mom_transcribe",
           description: reason,
-          timestamp: new Date().toISOString(),
           createdAt: new Date().toISOString(),
         };
+
         set((state) => {
-          const updatedBalance = (state.account.coinsBalance ?? 0) - amount;
-          const updatedAccount = {
-            ...state.account,
-            coinsBalance: updatedBalance,
-            coinBalance: updatedBalance,
-          };
           const updatedTransactions = [newTx, ...state.transactions];
           return {
-            account: updatedAccount,
+            account: {
+              ...state.account,
+              coinsBalance: newBalance,
+              coinBalance: newBalance,
+            },
             transactions: updatedTransactions,
             coinHistory: updatedTransactions,
           };
@@ -373,25 +239,25 @@ export const useAppStore = create<AppState>()(
       },
 
       addCoins: (amount, reason = "Top-up Saldo Koin") => {
+        const currentBalance = get().account.coinBalance ?? get().account.coinsBalance ?? 0;
+        const newBalance = currentBalance + amount;
         const newTx: CoinTransaction = {
           id: `tx_${Date.now()}`,
           type: "topup",
           amount,
           service: "topup_pack",
           description: reason,
-          timestamp: new Date().toISOString(),
           createdAt: new Date().toISOString(),
         };
+
         set((state) => {
-          const updatedBalance = (state.account.coinsBalance ?? 0) + amount;
-          const updatedAccount = {
-            ...state.account,
-            coinsBalance: updatedBalance,
-            coinBalance: updatedBalance,
-          };
           const updatedTransactions = [newTx, ...state.transactions];
           return {
-            account: updatedAccount,
+            account: {
+              ...state.account,
+              coinsBalance: newBalance,
+              coinBalance: newBalance,
+            },
             transactions: updatedTransactions,
             coinHistory: updatedTransactions,
           };
@@ -399,7 +265,7 @@ export const useAppStore = create<AppState>()(
       },
 
       // NFC Card Profile (Clean Zero)
-      cardProfile: DEFAULT_CARD_PROFILE,
+      cardProfile: CLEAN_CARD_PROFILE,
       updateCardProfile: (updates) =>
         set((state) => ({
           cardProfile: { ...state.cardProfile, ...updates },
@@ -416,7 +282,7 @@ export const useAppStore = create<AppState>()(
         })),
 
       // Meetings (Clean Zero)
-      meetings: INITIAL_MEETINGS,
+      meetings: [],
       activeRecording: false,
       recordingSeconds: 0,
       setMeetings: (meetings) => set({ meetings }),
@@ -439,8 +305,8 @@ export const useAppStore = create<AppState>()(
         })),
 
       // Leads / Contacts (Clean Zero)
-      contacts: INITIAL_CONTACTS,
-      leads: INITIAL_CONTACTS,
+      contacts: [],
+      leads: [],
       addContact: (contact) =>
         set((state) => {
           const updated = [contact, ...state.contacts];
@@ -462,32 +328,9 @@ export const useAppStore = create<AppState>()(
           return { contacts: updated, leads: updated };
         }),
 
-      // Calendar & Scheduling
-      calendarEvents: [
-        {
-          id: "ev_1",
-          title: "Follow-up Demo Integrasi NFC Card & MoM",
-          date: "2026-11-07",
-          time: "14:00 - 15:00",
-          attendees: "Deo Cardi Nathanael, Tim Bisnis",
-          location: "Google Meet / Virtual Room",
-          status: "upcoming",
-          source: "MoM Action Item",
-          googleCalendarUrl: "https://calendar.google.com",
-        },
-        {
-          id: "ev_2",
-          title: "Pertemuan Kerjasama NFC Smart Card",
-          date: "2026-11-08",
-          time: "10:30 - 11:30",
-          attendees: "Client Baru (Tamu NFC)",
-          location: "Plaza Senayan, Jakarta",
-          status: "upcoming",
-          source: "NFC Tap",
-          googleCalendarUrl: "https://calendar.google.com",
-        },
-      ],
-      isGoogleCalendarConnected: true,
+      // Calendar & Scheduling (Clean Zero)
+      calendarEvents: [],
+      isGoogleCalendarConnected: false,
       setGoogleCalendarConnected: (connected) => set({ isGoogleCalendarConnected: connected }),
       addCalendarEvent: (event) =>
         set((state) => ({ calendarEvents: [event, ...state.calendarEvents] })),
@@ -535,8 +378,8 @@ export const useAppStore = create<AppState>()(
       },
 
       // Transactions history (Clean Zero)
-      transactions: INITIAL_TRANSACTIONS,
-      coinHistory: INITIAL_TRANSACTIONS,
+      transactions: [],
+      coinHistory: [],
 
       // Switcher
       currentProductTab: "card",
@@ -551,7 +394,7 @@ export const useAppStore = create<AppState>()(
       toggleLocale: () => set((s) => ({ locale: s.locale === "id" ? "en" : "id" })),
     }),
     {
-      name: "cardi_nfc_storage_v2",
+      name: "cardi_nfc_storage_v3",
       storage: createJSONStorage(() => localStorage),
     }
   )

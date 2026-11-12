@@ -43,7 +43,7 @@ export default function AudioRecordModal({
         : "Rapat Diskusi Bisnis & Kemitraan")
   );
   const [attendees, setAttendees] = useState(
-    defaultAttendee || `${cardProfile.fullName || "Deo Cardi Nathanael"}, Rekan Bisnis`
+    defaultAttendee || `${cardProfile.fullName || "Saya"}, Rekan Bisnis`
   );
 
   // Audio recording states
@@ -71,7 +71,7 @@ export default function AudioRecordModal({
 
   useEffect(() => {
     if (defaultAttendee) {
-      setAttendees(`${cardProfile.fullName || "Deo Cardi Nathanael"}, ${defaultAttendee}`);
+      setAttendees(`${cardProfile.fullName || "Saya"}, ${defaultAttendee}`);
       setTitle(`Rapat dengan ${defaultAttendee}`);
     }
   }, [defaultAttendee, cardProfile.fullName]);
@@ -294,7 +294,7 @@ export default function AudioRecordModal({
                 type="text"
                 value={attendees}
                 onChange={(e) => setAttendees(e.target.value)}
-                placeholder="Deo Cardi Nathanael, Budi"
+                placeholder="Nama Anda, Rekan / Klien"
                 className="w-full bg-[#070F1E] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition"
               />
             </div>

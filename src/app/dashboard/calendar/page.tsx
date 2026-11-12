@@ -506,7 +506,7 @@ export default function DashboardCalendarPage() {
                   type="text"
                   value={attendees}
                   onChange={(e) => setAttendees(e.target.value)}
-                  placeholder="Deo Cardi Nathanael, Nama Klien"
+                  placeholder="Nama Anda, Nama Klien"
                   className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 ${
                     isDark
                       ? "bg-[#070F1E] border-white/15 text-white"

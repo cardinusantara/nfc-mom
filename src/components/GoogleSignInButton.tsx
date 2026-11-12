@@ -124,6 +124,10 @@ export default function GoogleSignInButton({
         });
 
         buttonRef.current.innerHTML = "";
+        const targetWidth = buttonRef.current
+          ? Math.min(360, Math.max(240, buttonRef.current.clientWidth || 320))
+          : 320;
+
         window.google.accounts.id.renderButton(buttonRef.current, {
           type: "standard",
           theme: "outline",
@@ -131,7 +135,7 @@ export default function GoogleSignInButton({
           text: "signin_with",
           shape: "rectangular",
           logo_alignment: "left",
-          width: 320,
+          width: targetWidth,
         });
 
         setIsScriptReady(true);
@@ -172,7 +176,11 @@ export default function GoogleSignInButton({
       };
       document.head.appendChild(script);
     } else {
-      script.addEventListener("load", setupButton);
+      if (window.google?.accounts?.id) {
+        setupButton();
+      } else {
+        script.addEventListener("load", setupButton);
+      }
     }
 
     return () => {
