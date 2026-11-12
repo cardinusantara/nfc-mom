@@ -81,7 +81,7 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": "text/vcard; charset=utf-8",
-      "Content-Disposition": `inline; filename="${safeFilename}.vcf"`,
+      "Content-Disposition": `attachment; filename="${safeFilename}.vcf"`,
       "Cache-Control": "no-cache, no-store, must-revalidate",
       "Pragma": "no-cache",
       "Expires": "0",

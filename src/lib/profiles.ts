@@ -9,7 +9,7 @@ export interface UserEntity {
 export const USER_REGISTRY: Record<string, UserEntity> = {
   deo: {
     account: {
-      email: "deo@cardi.co.id",
+      email: "cardinusantara@gmail.com",
       name: "Deo Cardi Nathanael",
       avatarUrl: "",
       coinsBalance: 0,
@@ -29,17 +29,17 @@ export const USER_REGISTRY: Record<string, UserEntity> = {
     cardProfile: {
       username: "deo",
       fullName: "Deo Cardi Nathanael",
-      headline: "Founder & Chief Executive Officer",
-      company: "Cardi",
-      phone: "+62 812-8899-0011",
-      email: "deo@cardi.co.id",
+      headline: "Founder & CEO",
+      company: "cardi.co.id",
+      phone: "+62 812-8989-5646",
+      email: "cardinusantara@gmail.com",
       website: "https://www.cardi.co.id",
       location: "Jakarta, Indonesia",
       bio: "Membangun solusi AI Meeting Intelligence dan Smart NFC Networking untuk efisiensi bisnis.",
       avatarUrl: "",
       cardDesign: "black-gold",
       socials: {
-        whatsapp: "https://wa.me/6281288990011",
+        whatsapp: "https://wa.me/6281289895646",
         linkedin: "https://linkedin.com/in/deocardi",
       },
       metrics: {

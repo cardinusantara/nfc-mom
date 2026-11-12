@@ -353,66 +353,11 @@ function PublicCardContent() {
     cardProfile.location || ""
   )}`;
 
-  const handleSaveContact = async (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (typeof navigator !== "undefined" && typeof window !== "undefined" && "canShare" in navigator) {
-      try {
-        const cleanName = (cardProfile?.fullName || username).trim();
-        const safeFilename = cleanName.replace(/[^a-zA-Z0-9_\-]/g, "_") || "kontak";
-        const cleanPhone = cardProfile?.phone ? cardProfile.phone.replace(/[^0-9+]/g, "") : "";
-        const noteLines = [
-          cardProfile?.headline ? `Jabatan: ${cardProfile.headline}` : "",
-          cardProfile?.company ? `Perusahaan: ${cardProfile.company}` : "",
-          cleanPhone ? `WhatsApp: https://wa.me/${cleanPhone.replace(/^\+/, "")}` : "",
-          `Profil Digital: https://nfc.cardi.co.id/${username}`,
-          "Tersimpan langsung via Cardi Smart NFC & AI MoM",
-        ].filter(Boolean);
-
-        const vcardContent = [
-          "BEGIN:VCARD",
-          "VERSION:3.0",
-          `FN:${cleanName}`,
-          cardProfile?.company ? `ORG:${cardProfile.company}` : "",
-          cardProfile?.headline ? `TITLE:${cardProfile.headline}` : "",
-          cleanPhone ? `TEL;TYPE=CELL,VOICE,PREF:${cleanPhone}` : "",
-          cardProfile?.email ? `EMAIL;TYPE=WORK,INTERNET:${cardProfile.email}` : "",
-          cardProfile?.website ? `URL;TYPE=WORK:${cardProfile.website}` : "",
-          `URL;TYPE=Cardi Profile:https://nfc.cardi.co.id/${username}`,
-          cardProfile?.location ? `ADR;TYPE=WORK:;;${cardProfile.location};;;;` : "",
-          noteLines.length ? `NOTE:${noteLines.join("\\n")}` : "",
-          "END:VCARD",
-        ]
-          .filter(Boolean)
-          .join("\r\n") + "\r\n";
-
-        const file = new File([vcardContent], `${safeFilename}.vcf`, {
-          type: "text/vcard",
-        });
-
-        if (navigator.canShare({ files: [file] })) {
-          e.preventDefault();
-          await navigator.share({
-            files: [file],
-            title: cleanName,
-          });
-          showToast(
-            locale === "id"
-              ? "Membuka kontak HP langsung..."
-              : "Opening phone contacts..."
-          );
-          return;
-        }
-      } catch (err: unknown) {
-        if ((err as Error)?.name === "AbortError") {
-          e.preventDefault();
-          return;
-        }
-      }
-    }
-
+  const handleSaveContact = () => {
     showToast(
       locale === "id"
-        ? "Membuka buku kontak HP..."
-        : "Opening phone contacts..."
+        ? "Menyimpan kontak ke buku telepon..."
+        : "Saving contact to phone..."
     );
   };
 
@@ -723,13 +668,22 @@ function PublicCardContent() {
           <div className="relative mb-3.5">
             <div className="w-24 h-24 rounded-full p-[2px] bg-gradient-to-b from-slate-200 via-slate-400 to-slate-600 dark:from-white/30 dark:via-white/15 dark:to-white/5 shadow-lg">
               <div className="w-full h-full rounded-full overflow-hidden bg-[#0A1633] flex items-center justify-center font-black text-2xl text-white">
-                {cardProfile.fullName
-                  ? cardProfile.fullName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .slice(0, 2)
-                      .join("")
-                  : "U"}
+                {cardProfile.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={cardProfile.avatarUrl}
+                    alt={cardProfile.fullName || "User Avatar"}
+                    className="w-full h-full object-cover"
+                  />
+                ) : cardProfile.fullName ? (
+                  cardProfile.fullName
+                    .split(" ")
+                    .map((n) => n[0])
+                    .slice(0, 2)
+                    .join("")
+                ) : (
+                  "U"
+                )}
               </div>
             </div>
             <div
@@ -774,6 +728,7 @@ function PublicCardContent() {
           <div className="w-full flex flex-col gap-2.5">
             <a
               href={vCardUrl}
+              download={`${(cardProfile?.fullName || username).replace(/[^a-zA-Z0-9_\-]/g, "_")}.vcf`}
               onClick={handleSaveContact}
               className="w-full bg-gradient-to-r from-[#1E4FFF] to-[#0258A4] hover:from-[#153DCC] hover:to-[#01417A] text-white py-3.5 px-5 rounded-2xl font-bold text-xs flex items-center justify-center gap-2.5 shadow-xl shadow-blue-500/20 transition-all border border-white/20 active:scale-[0.98]"
             >

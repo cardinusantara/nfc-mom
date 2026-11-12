@@ -31,6 +31,9 @@ import {
   X,
   ChevronRight,
   ShieldCheck,
+  Camera,
+  Image as ImageIcon,
+  Trash2,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { ContactLead } from "@/lib/types";
@@ -63,6 +66,45 @@ export default function DashboardCardPage() {
   const [editorTab, setEditorTab] = useState<"basic" | "contact" | "social">("basic");
   const [editForm, setEditForm] = useState(cardProfile);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxDim = 400;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+          setEditForm((prev) => ({ ...prev, avatarUrl: dataUrl }));
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
 
   // 3D Card Interactive Preview
   const [cardSide, setCardSide] = useState<"front" | "back">("front");
@@ -625,6 +667,25 @@ export default function DashboardCardPage() {
           {!isEditingProfile ? (
             /* VIEW MODE */
             <div className="space-y-6 text-xs">
+              {cardProfile.avatarUrl && (
+                <div className="flex items-center gap-3 pb-2">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/20 shadow-md">
+                    <img
+                      src={cardProfile.avatarUrl}
+                      alt={cardProfile.fullName || "Avatar"}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-50 block">
+                      Foto Profil
+                    </span>
+                    <span className="text-xs font-semibold text-emerald-400">
+                      Tersimpan & Aktif
+                    </span>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider opacity-50 block mb-0.5">
@@ -756,6 +817,76 @@ export default function DashboardCardPage() {
               {/* TAB 1: Basic Profile */}
               {editorTab === "basic" && (
                 <div className="space-y-3.5 text-xs">
+                  {/* Photo Profile Uploader (Camera & Gallery) */}
+                  <div className={`p-4 rounded-2xl border ${isDark ? "bg-white/5 border-white/10" : "bg-slate-50 border-slate-200"}`}>
+                    <label className="text-[10px] font-bold uppercase tracking-wider opacity-60 block mb-2">
+                      Foto Profil
+                    </label>
+
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={handleAvatarFile}
+                    />
+                    <input
+                      ref={galleryInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarFile}
+                    />
+
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/10 dark:bg-white/10 border border-white/10 flex items-center justify-center flex-shrink-0">
+                        {editForm.avatarUrl ? (
+                          <img
+                            src={editForm.avatarUrl}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Camera className="w-6 h-6 opacity-40" />
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => cameraInputRef.current?.click()}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1E4FFF] hover:bg-[#183ec9] text-white text-xs font-bold transition shadow-sm"
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                          <span>Kamera</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => galleryInputRef.current?.click()}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition ${
+                            isDark
+                              ? "bg-white/10 hover:bg-white/15 text-white border-white/15"
+                              : "bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-xs"
+                          }`}
+                        >
+                          <ImageIcon className="w-3.5 h-3.5" />
+                          <span>Galeri</span>
+                        </button>
+                        {editForm.avatarUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setEditForm((prev) => ({ ...prev, avatarUrl: undefined }))}
+                            className="p-2 rounded-xl text-red-400 hover:bg-red-500/10 transition"
+                            title="Hapus foto"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-[10px] font-bold uppercase tracking-wider opacity-60 block mb-1">
                       {t.cardDash.fullName}

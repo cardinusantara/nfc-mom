@@ -136,7 +136,7 @@ export interface CardProfile {
   website: string;
   location: string;
   bio: string;
-  avatarUrl: string;
+  avatarUrl?: string;
   cardDesign: "black-gold" | "royal-blue" | "silver-minimal";
   socials: {
     whatsapp?: string;
