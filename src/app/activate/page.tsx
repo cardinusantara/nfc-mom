@@ -119,6 +119,8 @@ function ActivateContent() {
           bio: "Pengguna kartu bisnis pintar Cardi Smart NFC Card dan AI MoM.",
           avatarUrl: "",
           cardDesign,
+          isActivated: true,
+          tagId: tagId.trim().toUpperCase() || "CRD-ACT-001",
           socials: {
             ...(phone ? { whatsapp: `https://wa.me/${phone.replace(/[^0-9]/g, "")}` } : {}),
           },
@@ -135,7 +137,11 @@ function ActivateContent() {
       setCreditedCoins(resData.coinsCredited);
 
       // Update global store with the user's card profile
-      updateCardProfile(resData.profile);
+      updateCardProfile({
+        ...resData.profile,
+        isActivated: true,
+        tagId: (resData as { tagId?: string })?.tagId || tagId.trim().toUpperCase() || "CRD-ACT-001",
+      });
 
       // Initialize user account & session
       setSession(`tok_${cleanUser}_active`, {

@@ -38,6 +38,8 @@ export const USER_REGISTRY: Record<string, UserEntity> = {
       bio: "Membangun solusi AI Meeting Intelligence dan Smart NFC Networking untuk efisiensi bisnis.",
       avatarUrl: "",
       cardDesign: "black-gold",
+      isActivated: true,
+      tagId: "CRD-DEO-001",
       socials: {
         whatsapp: "https://wa.me/6281289895646",
         linkedin: "https://linkedin.com/in/deocardi",

@@ -165,6 +165,17 @@ export class CardiApiClient {
     }
   }
 
+  async recordContactSave(username: string): Promise<{ success: boolean }> {
+    try {
+      return await this.request<{ success: boolean }>(
+        `/nfc/profile/${encodeURIComponent(username.toLowerCase())}/contact-save`,
+        { method: "POST" }
+      );
+    } catch {
+      return { success: false };
+    }
+  }
+
   async activateCard(data: {
     tagId: string;
     username: string;

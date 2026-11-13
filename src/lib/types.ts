@@ -138,6 +138,8 @@ export interface CardProfile {
   bio: string;
   avatarUrl?: string;
   cardDesign: "black-gold" | "royal-blue" | "silver-minimal";
+  isActivated?: boolean;
+  tagId?: string;
   socials: {
     whatsapp?: string;
     linkedin?: string;

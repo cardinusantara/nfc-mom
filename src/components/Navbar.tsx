@@ -18,6 +18,7 @@ import {
   X,
   ExternalLink,
   ChevronDown,
+  Home,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { getTranslation } from "@/lib/i18n";
@@ -178,6 +179,15 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
                   </div>
 
                   <div className="py-1">
+                    <Link
+                      href="/"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition text-xs font-medium"
+                    >
+                      <span>Beranda Web</span>
+                      <Home className="w-3.5 h-3.5 opacity-50" />
+                    </Link>
+
                     <Link
                       href={`/${cardProfile.username || "user"}`}
                       target="_blank"

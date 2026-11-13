@@ -39,6 +39,57 @@ import { getTranslation } from "@/lib/i18n";
 import { cardiApi } from "@/lib/api";
 import type { CardProfile } from "@/lib/types";
 import { CardiMomIcon, CardiMomLogo } from "@/components/CardiMomLogo";
+import { generateVCard, getVCardFileName, normalizeSocialUrl } from "@/lib/vcard";
+
+function LinkedInBrandIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
+    </svg>
+  );
+}
+
+function InstagramBrandIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function GitHubBrandIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+    </svg>
+  );
+}
+
+function TwitterBrandIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
+function WhatsAppBrandIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.53c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.24-.75-.67-1.25-1.49-1.4-1.74-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.29" />
+    </svg>
+  );
+}
 
 export default function PublicCardPage() {
   return (
@@ -342,23 +393,83 @@ function PublicCardContent() {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  // VCard link
-  const vCardUrl = `/api/vcard/${username}?name=${encodeURIComponent(
-    cardProfile.fullName || "User"
-  )}&title=${encodeURIComponent(cardProfile.headline || "")}&company=${encodeURIComponent(
-    cardProfile.company || ""
-  )}&phone=${encodeURIComponent(cardProfile.phone || "")}&email=${encodeURIComponent(
-    cardProfile.email || ""
-  )}&website=${encodeURIComponent(cardProfile.website || "")}&address=${encodeURIComponent(
-    cardProfile.location || ""
-  )}`;
+  // Contact Saving State and Logic (Web Share API with 1-tap Blob fallback)
+  const [isSavingContact, setIsSavingContact] = useState(false);
 
-  const handleSaveContact = () => {
+  const handleSaveContact = async () => {
+    if (isSavingContact) return;
+    setIsSavingContact(true);
     showToast(
       locale === "id"
-        ? "Menyimpan kontak ke buku telepon..."
-        : "Saving contact to phone..."
+        ? "Menyiapkan kartu kontak..."
+        : "Preparing contact card..."
     );
+
+    try {
+      const vCardContent = generateVCard(cardProfile);
+      const fileName = getVCardFileName(cardProfile);
+      const blob = new Blob([vCardContent], { type: "text/vcard;charset=utf-8" });
+
+      // Track metric asynchronously if api is available
+      if (username) {
+        cardiApi.recordContactSave(username).catch(() => {});
+      }
+
+      // Check for Web Share API file sharing support (iOS Safari & Android Chrome)
+      const file = new File([blob], fileName, { type: "text/vcard" });
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.canShare &&
+        navigator.canShare({ files: [file] })
+      ) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: cardProfile.fullName || username,
+            text: `Kontak ${cardProfile.fullName || username} via Cardi NFC`,
+          });
+          showToast(
+            locale === "id"
+              ? "Kontak berhasil dibagikan ke perangkat!"
+              : "Contact shared to device!"
+          );
+          setIsSavingContact(false);
+          return;
+        } catch (shareErr: unknown) {
+          if ((shareErr as { name?: string })?.name === "AbortError") {
+            // User cancelled share sheet
+            setIsSavingContact(false);
+            return;
+          }
+          // If share rejected with file type, fallback to instant client download
+        }
+      }
+
+      // Fallback: Direct 1-tap client-side Blob download
+      const downloadUrl = URL.createObjectURL(blob);
+      const downloadLink = document.createElement("a");
+      downloadLink.href = downloadUrl;
+      downloadLink.download = fileName;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 1500);
+
+      showToast(
+        locale === "id"
+          ? "Kontak berhasil diunduh!"
+          : "Contact downloaded successfully!"
+      );
+    } catch (err) {
+      console.error("Save contact error:", err);
+      showToast(
+        locale === "id"
+          ? "Gagal menyimpan kontak"
+          : "Failed to save contact"
+      );
+    } finally {
+      setIsSavingContact(false);
+    }
   };
 
   // Card Appearance Styles based on Finish
@@ -664,10 +775,10 @@ function PublicCardContent() {
               : "bg-white border-slate-200 shadow-sm"
           }`}
         >
-          {/* Avatar with Status Ring */}
+          {/* Avatar with Status Ring (Enlarged for Executive Prominence) */}
           <div className="relative mb-3.5">
-            <div className="w-24 h-24 rounded-full p-[2px] bg-gradient-to-b from-slate-200 via-slate-400 to-slate-600 dark:from-white/30 dark:via-white/15 dark:to-white/5 shadow-lg">
-              <div className="w-full h-full rounded-full overflow-hidden bg-[#0A1633] flex items-center justify-center font-black text-2xl text-white">
+            <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full p-[3px] bg-gradient-to-b from-slate-200 via-slate-400 to-slate-600 dark:from-white/30 dark:via-white/15 dark:to-white/5 shadow-lg">
+              <div className="w-full h-full rounded-full overflow-hidden bg-[#0A1633] flex items-center justify-center font-black text-3xl sm:text-4xl text-white">
                 {cardProfile.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -687,10 +798,10 @@ function PublicCardContent() {
               </div>
             </div>
             <div
-              className="absolute bottom-1 right-1 bg-[#10B981] border-[2.5px] border-[#0E1A33] w-6 h-6 rounded-full flex items-center justify-center shadow-md"
+              className="absolute bottom-1.5 right-1.5 bg-[#10B981] border-[3px] border-[#0E1A33] w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shadow-md"
               title="Chip NFC Aktif"
             >
-              <Check className="w-3 h-3 text-white stroke-[3]" />
+              <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white stroke-[3]" />
             </div>
           </div>
 
@@ -726,19 +837,19 @@ function PublicCardContent() {
 
           {/* HERO ACTIONS */}
           <div className="w-full flex flex-col gap-2.5">
-            <a
-              href={vCardUrl}
-              download={`${(cardProfile?.fullName || username).replace(/[^a-zA-Z0-9_\-]/g, "_")}.vcf`}
+            <button
+              type="button"
               onClick={handleSaveContact}
-              className="w-full bg-gradient-to-r from-[#1E4FFF] to-[#0258A4] hover:from-[#153DCC] hover:to-[#01417A] text-white py-3.5 px-5 rounded-2xl font-bold text-xs flex items-center justify-center gap-2.5 shadow-xl shadow-blue-500/20 transition-all border border-white/20 active:scale-[0.98]"
+              disabled={isSavingContact}
+              className="w-full bg-gradient-to-r from-[#1E4FFF] to-[#0258A4] hover:from-[#153DCC] hover:to-[#01417A] text-white py-3.5 px-5 rounded-2xl font-bold text-xs flex items-center justify-center gap-2.5 shadow-xl shadow-blue-500/20 transition-all border border-white/20 active:scale-[0.98] cursor-pointer disabled:opacity-75"
             >
               <UserCheck className="w-4 h-4 text-[#00C2D1]" />
               <span>
-                {locale === "id"
-                  ? "Simpan ke Kontak HP"
-                  : "Save to Phone Contacts"}
+                {isSavingContact
+                  ? (locale === "id" ? "Menyiapkan Kontak..." : "Preparing Contact...")
+                  : (locale === "id" ? "Simpan ke Kontak HP" : "Save to Phone Contacts")}
               </span>
-            </a>
+            </button>
 
             {/* Secondary Action Row: QR Code & Google Calendar */}
             <div className="grid grid-cols-2 gap-2 w-full">
@@ -840,6 +951,88 @@ function PublicCardContent() {
                 </a>
               )}
             </div>
+
+            {/* Tautan & Media Sosial Section */}
+            {(() => {
+              const socialItems = [
+                cardProfile.socials?.linkedin
+                  ? {
+                      name: "LinkedIn",
+                      url: normalizeSocialUrl("linkedin", cardProfile.socials.linkedin),
+                      icon: <LinkedInBrandIcon className="w-4 h-4 text-[#0A66C2]" />,
+                      badgeHover: "hover:border-[#0A66C2]/40 hover:bg-[#0A66C2]/10",
+                    }
+                  : null,
+                cardProfile.socials?.instagram
+                  ? {
+                      name: "Instagram",
+                      url: normalizeSocialUrl("instagram", cardProfile.socials.instagram),
+                      icon: <InstagramBrandIcon className="w-4 h-4 text-[#E4405F]" />,
+                      badgeHover: "hover:border-[#E4405F]/40 hover:bg-[#E4405F]/10",
+                    }
+                  : null,
+                cardProfile.socials?.github
+                  ? {
+                      name: "GitHub",
+                      url: normalizeSocialUrl("github", cardProfile.socials.github),
+                      icon: <GitHubBrandIcon className="w-4 h-4 text-slate-800 dark:text-slate-200" />,
+                      badgeHover: "hover:border-slate-500/40 hover:bg-slate-500/10",
+                    }
+                  : null,
+                cardProfile.socials?.twitter
+                  ? {
+                      name: "Twitter / X",
+                      url: normalizeSocialUrl("twitter", cardProfile.socials.twitter),
+                      icon: <TwitterBrandIcon className="w-4 h-4 text-slate-900 dark:text-white" />,
+                      badgeHover: "hover:border-sky-500/40 hover:bg-sky-500/10",
+                    }
+                  : null,
+                cardProfile.socials?.whatsapp
+                  ? {
+                      name: "WhatsApp",
+                      url: normalizeSocialUrl("whatsapp", cardProfile.socials.whatsapp),
+                      icon: <WhatsAppBrandIcon className="w-4 h-4 text-[#25D366]" />,
+                      badgeHover: "hover:border-[#25D366]/40 hover:bg-[#25D366]/10",
+                    }
+                  : null,
+              ].filter(Boolean) as {
+                name: string;
+                url: string;
+                icon: React.ReactNode;
+                badgeHover: string;
+              }[];
+
+              if (socialItems.length === 0) return null;
+
+              return (
+                <div className="w-full pt-3 mt-1 border-t border-slate-200/60 dark:border-white/10 text-left">
+                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 block mb-2 text-center">
+                    {t.publicCard.socialProfiles}
+                  </span>
+                  <div className="grid grid-cols-2 gap-2 w-full">
+                    {socialItems.map((item) => (
+                      <a
+                        key={item.name}
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-between transition border ${item.badgeHover} ${
+                          isDark
+                            ? "bg-white/5 border-white/10 text-white"
+                            : "bg-slate-50 border-slate-200 text-slate-800"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 truncate">
+                          {item.icon}
+                          <span className="truncate">{item.name}</span>
+                        </span>
+                        <ExternalLink className="w-3 h-3 opacity-50 flex-shrink-0" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

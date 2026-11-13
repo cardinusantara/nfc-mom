@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   CreditCard,
   Mic,
@@ -39,23 +38,9 @@ import { useAppStore, useAuthSession } from "@/lib/store";
 import { CardiMomLogo, CardiMomIcon } from "@/components/CardiMomLogo";
 
 export default function HomePage() {
-  const router = useRouter();
   const { hasHydrated, isAuthenticated } = useAuthSession();
   const { theme, toggleTheme, locale, toggleLocale } = useAppStore();
   const isDark = theme === "dark";
-
-  // Auto-redirect if authenticated (allow bypass with ?stay=1 or ?preview=1)
-  useEffect(() => {
-    if (hasHydrated && isAuthenticated) {
-      if (typeof window !== "undefined") {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get("stay") === "1" || params.get("preview") === "1") {
-          return;
-        }
-      }
-      router.replace("/dashboard/card");
-    }
-  }, [hasHydrated, isAuthenticated, router]);
 
   // 3D Card Interactive Preview
   const [cardSide, setCardSide] = useState<"front" | "back">("front");
@@ -224,6 +209,14 @@ export default function HomePage() {
             <a href="#faq" className="hover:text-sky-600 transition">
               FAQ
             </a>
+            {isAuthenticated && (
+              <Link
+                href="/dashboard/card"
+                className="hover:text-sky-600 transition font-bold text-[#0258A4] dark:text-[#38bdf8]"
+              >
+                Dashboard
+              </Link>
+            )}
           </nav>
 
           {/* Action CTAs */}

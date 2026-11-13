@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cardiApi } from "@/lib/api";
 import { getProfileByUsername } from "@/lib/profiles";
+import { normalizeSocialUrl } from "@/lib/vcard";
 
 export async function GET(
   request: NextRequest,
@@ -17,28 +18,29 @@ export async function GET(
   let email = searchParams.get("email");
   let website = searchParams.get("website");
   let address = searchParams.get("address") || "Jakarta, Indonesia";
+  let socials: Record<string, string | undefined> = {};
 
-  if (!fullName) {
-    const liveProfile = await cardiApi.fetchPublicProfile(username);
-    if (liveProfile) {
-      fullName = liveProfile.fullName;
-      headline = liveProfile.headline;
-      company = liveProfile.company;
-      phone = liveProfile.phone;
-      email = liveProfile.email;
-      website = liveProfile.website;
-      address = liveProfile.location || address;
-    } else {
-      const fallback = getProfileByUsername(username);
-      if (fallback) {
-        fullName = fallback.fullName;
-        headline = fallback.headline;
-        company = fallback.company;
-        phone = fallback.phone;
-        email = fallback.email;
-        website = fallback.website;
-        address = fallback.location || address;
-      }
+  const liveProfile = await cardiApi.fetchPublicProfile(username);
+  if (liveProfile) {
+    if (!fullName) fullName = liveProfile.fullName;
+    if (!headline) headline = liveProfile.headline;
+    if (!company) company = liveProfile.company;
+    if (!phone) phone = liveProfile.phone;
+    if (!email) email = liveProfile.email;
+    if (!website) website = liveProfile.website;
+    if (!searchParams.get("address")) address = liveProfile.location || address;
+    if (liveProfile.socials) socials = liveProfile.socials;
+  } else {
+    const fallback = getProfileByUsername(username);
+    if (fallback) {
+      if (!fullName) fullName = fallback.fullName;
+      if (!headline) headline = fallback.headline;
+      if (!company) company = fallback.company;
+      if (!phone) phone = fallback.phone;
+      if (!email) email = fallback.email;
+      if (!website) website = fallback.website;
+      if (!searchParams.get("address")) address = fallback.location || address;
+      if (fallback.socials) socials = fallback.socials;
     }
   }
 
@@ -70,6 +72,11 @@ export async function GET(
     website ? `URL;TYPE=WORK:${website}` : "",
     `URL;TYPE=Cardi Profile:https://nfc.cardi.co.id/${username}`,
     address ? `ADR;TYPE=WORK:;;${address};;;;` : "",
+    socials.linkedin ? `X-SOCIALPROFILE;TYPE=linkedin:${normalizeSocialUrl("linkedin", socials.linkedin)}` : "",
+    socials.instagram ? `X-SOCIALPROFILE;TYPE=instagram:${normalizeSocialUrl("instagram", socials.instagram)}` : "",
+    socials.github ? `X-SOCIALPROFILE;TYPE=github:${normalizeSocialUrl("github", socials.github)}` : "",
+    socials.twitter ? `X-SOCIALPROFILE;TYPE=twitter:${normalizeSocialUrl("twitter", socials.twitter)}` : "",
+    socials.whatsapp ? `X-SOCIALPROFILE;TYPE=whatsapp:${normalizeSocialUrl("whatsapp", socials.whatsapp)}` : "",
     noteLines.length ? `NOTE:${noteLines.join("\\n")}` : "",
     `REV:${new Date().toISOString()}`,
     "END:VCARD",

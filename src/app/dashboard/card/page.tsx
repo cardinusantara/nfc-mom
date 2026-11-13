@@ -40,6 +40,7 @@ import { ContactLead } from "@/lib/types";
 import { getTranslation } from "@/lib/i18n";
 import { cardiApi } from "@/lib/api";
 import AudioRecordModal from "@/components/AudioRecordModal";
+import { PhotoCropModal } from "@/components/PhotoCropModal";
 import { CardiMomIcon } from "@/components/CardiMomLogo";
 
 export default function DashboardCardPage() {
@@ -56,6 +57,13 @@ export default function DashboardCardPage() {
   const isDark = theme === "dark";
   const t = getTranslation(locale);
 
+  // Active Card Status determination
+  const hasActiveCard = Boolean(
+    cardProfile.isActivated ||
+    cardProfile.tagId ||
+    (cardProfile.username && cardProfile.fullName && cardProfile.username !== "user")
+  );
+
   // States
   const [copied, setCopied] = useState(false);
   const [nfcWriteStatus, setNfcWriteStatus] = useState<string | null>(null);
@@ -66,6 +74,8 @@ export default function DashboardCardPage() {
   const [editorTab, setEditorTab] = useState<"basic" | "contact" | "social">("basic");
   const [editForm, setEditForm] = useState(cardProfile);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [rawImageForCrop, setRawImageForCrop] = useState<string>("");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -74,33 +84,11 @@ export default function DashboardCardPage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const maxDim = 400;
-        let width = img.width;
-        let height = img.height;
-        if (width > height) {
-          if (width > maxDim) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          }
-        } else {
-          if (height > maxDim) {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
-          setEditForm((prev) => ({ ...prev, avatarUrl: dataUrl }));
-        }
-      };
-      img.src = event.target?.result as string;
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setRawImageForCrop(dataUrl);
+        setCropModalOpen(true);
+      }
     };
     reader.readAsDataURL(file);
     e.target.value = "";
@@ -263,13 +251,15 @@ export default function DashboardCardPage() {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          <Link
-            href="/activate"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#00C2D1]/15 hover:bg-[#00C2D1]/25 border border-[#00C2D1]/30 text-xs font-bold text-[#00C2D1] transition shadow-sm"
-          >
-            <Radio className="w-3.5 h-3.5" />
-            <span>{t.cardDash.btnStartActivate}</span>
-          </Link>
+          {!hasActiveCard && (
+            <Link
+              href="/activate"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#00C2D1]/15 hover:bg-[#00C2D1]/25 border border-[#00C2D1]/30 text-xs font-bold text-[#00C2D1] transition shadow-sm"
+            >
+              <Radio className="w-3.5 h-3.5" />
+              <span>{t.cardDash.btnStartActivate}</span>
+            </Link>
+          )}
 
           <button
             onClick={handleCopyLink}
@@ -298,8 +288,8 @@ export default function DashboardCardPage() {
         </div>
       </div>
 
-      {/* 02. Onboarding Alert (If Card has not been configured) */}
-      {(!cardProfile.username || !cardProfile.fullName) && (
+      {/* 02. Onboarding Alert (If Card has not been configured or activated) */}
+      {!hasActiveCard && (
         <div
           className={`rounded-2xl p-5 border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition ${
             isDark
@@ -772,10 +762,16 @@ export default function DashboardCardPage() {
                       WhatsApp
                     </span>
                   )}
+                  {cardProfile.socials?.twitter && (
+                    <span className="px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-400 font-mono text-[11px] border border-sky-500/20">
+                      Twitter / X
+                    </span>
+                  )}
                   {!cardProfile.socials?.linkedin &&
                     !cardProfile.socials?.instagram &&
                     !cardProfile.socials?.github &&
-                    !cardProfile.socials?.whatsapp && (
+                    !cardProfile.socials?.whatsapp &&
+                    !cardProfile.socials?.twitter && (
                       <span className="opacity-40 italic text-[11px]">
                         Belum ada tautan media sosial.
                       </span>
@@ -1119,6 +1115,31 @@ export default function DashboardCardPage() {
                       }`}
                     />
                   </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider opacity-60 block mb-1">
+                      Twitter / X URL
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="https://x.com/username atau @username"
+                      value={editForm.socials?.twitter || ""}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          socials: {
+                            ...editForm.socials,
+                            twitter: e.target.value,
+                          },
+                        })
+                      }
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
+                        isDark
+                          ? "bg-[#070D1E] border-white/15 text-white"
+                          : "bg-slate-50 border-slate-300 text-slate-900"
+                      }`}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -1336,6 +1357,23 @@ export default function DashboardCardPage() {
         isOpen={isRecordModalOpen}
         onClose={() => setIsRecordModalOpen(false)}
       />
+
+      {/* Photo Crop Modal */}
+      {cropModalOpen && rawImageForCrop && (
+        <PhotoCropModal
+          isOpen={cropModalOpen}
+          imageSrc={rawImageForCrop}
+          onCrop={(croppedDataUrl) => {
+            setEditForm((prev) => ({ ...prev, avatarUrl: croppedDataUrl }));
+            setCropModalOpen(false);
+            setRawImageForCrop("");
+          }}
+          onCancel={() => {
+            setCropModalOpen(false);
+            setRawImageForCrop("");
+          }}
+        />
+      )}
     </div>
   );
 }
