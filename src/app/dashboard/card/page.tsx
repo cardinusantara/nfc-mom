@@ -57,11 +57,10 @@ export default function DashboardCardPage() {
   const isDark = theme === "dark";
   const t = getTranslation(locale);
 
-  // Active Card Status determination
+  // Active Card Status determination: true only if card is activated or has a valid hardware tag
   const hasActiveCard = Boolean(
     cardProfile.isActivated ||
-    cardProfile.tagId ||
-    (cardProfile.username && cardProfile.fullName && cardProfile.username !== "user")
+    Boolean(cardProfile.tagId && cardProfile.tagId.trim().length > 0)
   );
 
   // States
