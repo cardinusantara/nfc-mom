@@ -1,11 +1,18 @@
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import type { CardProfile } from "@/lib/types";
 
-const DB_FILE_PATH =
-  process.env.DATABASE_PATH ||
-  path.join(process.cwd(), "data", "cardi_nfc.db");
+function resolveDbPath(): string {
+  if (process.env.DATABASE_PATH) {
+    return process.env.DATABASE_PATH;
+  }
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join(os.tmpdir(), "cardi_nfc.db");
+  }
+  return path.join(process.cwd(), "data", "cardi_nfc.db");
+}
 
 interface DbRow {
   username: string;
@@ -116,13 +123,22 @@ function initSchemaAndSeed(db: DatabaseSync): void {
 
 export function getDb(): DatabaseSync {
   if (!globalForDb.__cardi_db) {
-    const dbDir = path.dirname(DB_FILE_PATH);
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
+    let targetPath = resolveDbPath();
+    const dbDir = path.dirname(targetPath);
+    try {
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+    } catch {
+      targetPath = path.join(os.tmpdir(), "cardi_nfc.db");
     }
 
-    const db = new DatabaseSync(DB_FILE_PATH);
-    db.exec("PRAGMA journal_mode = WAL;");
+    const db = new DatabaseSync(targetPath);
+    try {
+      db.exec("PRAGMA journal_mode = WAL;");
+    } catch {
+      db.exec("PRAGMA journal_mode = DELETE;");
+    }
     db.exec("PRAGMA busy_timeout = 5000;");
     db.exec("PRAGMA synchronous = NORMAL;");
 
