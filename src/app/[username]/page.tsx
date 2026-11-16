@@ -32,6 +32,7 @@ import {
   Square,
   Sun,
   Moon,
+  Smartphone,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { getProfileByUsername } from "@/lib/profiles";
@@ -40,6 +41,8 @@ import { cardiApi } from "@/lib/api";
 import type { CardProfile } from "@/lib/types";
 import { CardiMomIcon, CardiMomLogo } from "@/components/CardiMomLogo";
 import { generateVCard, getVCardFileName, normalizeSocialUrl } from "@/lib/vcard";
+import { launchMobileRecording, launchMobileHandOff } from "@/lib/handoff";
+import AppDownloadModal from "@/components/AppDownloadModal";
 
 function LinkedInBrandIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
@@ -232,6 +235,8 @@ function PublicCardContent() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [recordInterval, setRecordInterval] = useState<NodeJS.Timeout | null>(null);
+  const [showAppDownloadModal, setShowAppDownloadModal] = useState(false);
+  const [recordedMeetingId, setRecordedMeetingId] = useState<string | null>(null);
   const [momResult, setMomResult] = useState<{
     summary: string;
     decisions: string[];
@@ -329,9 +334,12 @@ function PublicCardContent() {
 
     setMomResult(generatedMom);
 
+    const newMeetingId = `mtg_${Date.now()}`;
+    setRecordedMeetingId(newMeetingId);
+
     // Save to global MoM store
     addMeeting({
-      id: `mtg_${Date.now()}`,
+      id: newMeetingId,
       title: `Rapat Tatap Muka: ${cardProfile.fullName || "Partner"}`,
       titleIsDefault: false,
       date: new Date().toISOString().split("T")[0],
@@ -1228,17 +1236,35 @@ function PublicCardContent() {
 
             {/* Action Buttons */}
             {!isRecording ? (
-              <button
-                onClick={startMeetingRecord}
-                className="w-full bg-[#EF4444] hover:bg-[#DC2626] text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition"
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{t.publicCard.btnStartRecord}</span>
-              </button>
+              <div className="w-full space-y-2">
+                <button
+                  type="button"
+                  onClick={startMeetingRecord}
+                  className="w-full bg-[#EF4444] hover:bg-[#DC2626] text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>{t.publicCard.btnStartRecord}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    launchMobileRecording({
+                      title: `Rapat Tatap Muka: ${cardProfile.fullName || "Partner"}`,
+                      onAppNotInstalled: () => setShowAppDownloadModal(true),
+                      source: "nfc_profile_widget",
+                    });
+                  }}
+                  className="w-full bg-[#1E4FFF]/10 hover:bg-[#1E4FFF]/20 border border-[#1E4FFF]/30 text-[#1E4FFF] dark:text-[#38BDF8] py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span>Buka / Rekam di Aplikasi Mobile</span>
+                </button>
+              </div>
             ) : (
               <button
+                type="button"
                 onClick={stopMeetingRecord}
-                className="w-full bg-gradient-to-r from-[#1E4FFF] to-[#00C2D1] text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition"
+                className="w-full bg-gradient-to-r from-[#1E4FFF] to-[#00C2D1] text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition cursor-pointer"
               >
                 <Square className="w-3.5 h-3.5 fill-current" />
                 <span>{t.publicCard.btnStopRecord}</span>
@@ -1252,12 +1278,30 @@ function PublicCardContent() {
                   <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#00C2D1] flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" /> {t.publicCard.momDone}
                   </span>
-                  <Link
-                    href="/dashboard/mom"
-                    className="text-[10px] text-[#1E4FFF] hover:underline flex items-center gap-1 font-bold"
-                  >
-                    Buka di Dashboard <ArrowRight className="w-3 h-3" />
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        launchMobileHandOff({
+                          meetingId: recordedMeetingId || "new",
+                          title: `Rapat Tatap Muka: ${cardProfile.fullName || "Partner"}`,
+                          onAppNotInstalled: () => setShowAppDownloadModal(true),
+                          source: "nfc_profile_mom",
+                        });
+                      }}
+                      className="text-[10px] text-[#00C2D1] hover:underline flex items-center gap-1 font-bold cursor-pointer"
+                    >
+                      <Smartphone className="w-3 h-3" />
+                      Aplikasi Mobile
+                    </button>
+                    <span className="text-slate-500 text-[10px]">|</span>
+                    <Link
+                      href="/dashboard/mom"
+                      className="text-[10px] text-[#1E4FFF] hover:underline flex items-center gap-1 font-bold"
+                    >
+                      Dashboard <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
                 </div>
                 <p className="text-xs opacity-80 leading-relaxed mb-2 bg-black/5 dark:bg-white/5 p-2.5 rounded-xl border border-black/5 dark:border-white/10">
                   {momResult.summary}
@@ -1482,6 +1526,14 @@ function PublicCardContent() {
           </div>
         </div>
       )}
+
+      {/* App Download Prompt Modal */}
+      <AppDownloadModal
+        isOpen={showAppDownloadModal}
+        onClose={() => setShowAppDownloadModal(false)}
+        meetingId={recordedMeetingId || undefined}
+        title={`Rapat Tatap Muka: ${cardProfile.fullName || "Partner"}`}
+      />
       </div>
     </div>
   );

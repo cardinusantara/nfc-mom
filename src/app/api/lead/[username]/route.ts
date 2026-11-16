@@ -61,7 +61,7 @@ export async function POST(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(savedLead),
         signal: AbortSignal.timeout(3000),
-      }).catch(() => {});
+      }).catch(() => { });
     } catch {
       // Backend not yet reachable; proceed
     }

@@ -109,19 +109,42 @@ export class CardiApiClient {
     );
   }
 
-  // 4. S3 Presigned URL & Upload
-  async getUploadPresignedUrl(filename: string): Promise<{ uploadUrl: string; key: string }> {
-    return await this.request<{ uploadUrl: string; key: string }>("/audio/presigned-url", {
-      method: "POST",
-      body: JSON.stringify({ filename }),
-    });
+  // 4. S3 Presigned URL & Direct Upload Hand-off
+  async getUploadPresignedUrl(
+    meetingId: string,
+    ext = "webm"
+  ): Promise<{ uploadUrl: string; key: string }> {
+    return await this.request<{ uploadUrl: string; key: string }>(
+      `/meetings/${encodeURIComponent(meetingId)}/upload-url`,
+      {
+        method: "POST",
+        body: JSON.stringify({ ext }),
+      }
+    );
   }
 
-  async uploadAudioToS3(uploadUrl: string, blob: Blob): Promise<boolean> {
+  async confirmUploadComplete(
+    meetingId: string,
+    data: { key: string; durationMs: number; sizeBytes: number }
+  ): Promise<{ meeting: Meeting }> {
+    return await this.request<{ meeting: Meeting }>(
+      `/meetings/${encodeURIComponent(meetingId)}/upload-complete`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async uploadAudioToS3(
+    uploadUrl: string,
+    blob: Blob,
+    contentType = "audio/webm"
+  ): Promise<boolean> {
     const res = await fetch(uploadUrl, {
       method: "PUT",
       body: blob,
-      headers: { "Content-Type": "audio/m4a" },
+      headers: { "Content-Type": contentType },
     });
     return res.ok;
   }
