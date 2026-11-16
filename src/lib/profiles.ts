@@ -28,7 +28,7 @@ export const USER_REGISTRY: Record<string, UserEntity> = {
     },
     cardProfile: {
       username: "deo",
-      fullName: "Deo Cardi Nathanael",
+      fullName: "Founder & CEO",
       headline: "Founder & CEO",
       company: "cardi.co.id",
       phone: "+62 812-8989-5646",
@@ -53,29 +53,10 @@ export const USER_REGISTRY: Record<string, UserEntity> = {
   },
 };
 
-export function getProfileByUsername(username: string): CardProfile {
+export function getProfileByUsername(username: string): CardProfile | null {
   const key = username.toLowerCase().trim();
   if (USER_REGISTRY[key]) {
     return USER_REGISTRY[key].cardProfile;
   }
-  // Default clean profile template untuk username baru (tanpa data fiktif / fake stats)
-  return {
-    username: key,
-    fullName: key.charAt(0).toUpperCase() + key.slice(1),
-    headline: "Pengguna Cardi Smart Card",
-    company: "Cardi Network",
-    phone: "",
-    email: "",
-    website: "https://www.cardi.co.id",
-    location: "Indonesia",
-    bio: "Pengguna kartu bisnis pintar Cardi Smart NFC Card dan AI MoM.",
-    avatarUrl: "",
-    cardDesign: "black-gold",
-    socials: {},
-    metrics: {
-      totalTaps: 0,
-      contactsSaved: 0,
-      momInitiated: 0,
-    },
-  };
+  return null;
 }

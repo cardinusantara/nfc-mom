@@ -152,6 +152,8 @@ export interface CardProfile {
     contactsSaved: number;
     momInitiated: number;
   };
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Contact / Lead Entity

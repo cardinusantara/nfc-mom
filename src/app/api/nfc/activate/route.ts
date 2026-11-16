@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CardProfile } from "@/lib/types";
+import { upsertCardProfile } from "@/lib/server/db";
 
 const CARDI_API_URL =
   process.env.CARDI_API_URL ||
@@ -24,24 +25,31 @@ export async function POST(req: NextRequest) {
       bio = "Pengguna kartu bisnis pintar Cardi Smart NFC Card dan AI MoM.",
     } = body;
 
-    const cleanUsername = String(username).toLowerCase().replace(/[^a-z0-9_-]/g, "") || "user";
+    const cleanUsername =
+      String(username).toLowerCase().replace(/[^a-z0-9_-]/g, "") || "user";
+    const cleanTagId = String(tagId).trim().toUpperCase();
+    const cleanEmail = String(email).trim().toLowerCase();
 
     let coinsCredited = 0;
     if (bundleTier === "bulk") coinsCredited = 2500;
     else if (bundleTier === "quick") coinsCredited = 500;
 
-    const profile: CardProfile = {
+    const nowIso = new Date().toISOString();
+
+    const profileToSave: Partial<CardProfile> & { username: string } = {
       username: cleanUsername,
+      tagId: cleanTagId,
       fullName: String(fullName).trim(),
       headline: String(headline).trim(),
       company: String(company).trim(),
       phone: String(phone).trim(),
-      email: String(email).trim().toLowerCase(),
+      email: cleanEmail,
       website: String(website).trim(),
       location: String(location).trim(),
       bio: String(bio).trim(),
       avatarUrl: "",
       cardDesign: cardDesign as "black-gold" | "royal-blue" | "silver-minimal",
+      isActivated: true,
       socials: {
         ...(phone ? { whatsapp: `https://wa.me/${phone.replace(/[^0-9]/g, "")}` } : {}),
       },
@@ -50,12 +58,17 @@ export async function POST(req: NextRequest) {
         contactsSaved: 0,
         momInitiated: 0,
       },
+      createdAt: nowIso,
+      updatedAt: nowIso,
     };
+
+    // Persist to local SQLite database
+    const savedProfile = upsertCardProfile(profileToSave);
 
     // Forward to remote API if accessible, with 4 second timeout
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 1000);
 
       const remoteRes = await fetch(`${CARDI_API_URL}/nfc/activate`, {
         method: "POST",
@@ -70,17 +83,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(remoteData);
       }
     } catch {
-      // Remote backend offline or unconfigured, fallback to local activation response
+      // Remote backend offline or unconfigured, fallback to local persistent activation response
     }
 
     return NextResponse.json({
       success: true,
       username: cleanUsername,
-      tagId: String(tagId).trim().toUpperCase(),
-      email: String(email).trim().toLowerCase(),
+      tagId: cleanTagId,
+      email: cleanEmail,
       coinsCredited,
       totalCoinsBalance: coinsCredited,
-      profile,
+      profile: savedProfile,
     });
   } catch (err: any) {
     console.error("Error pada /api/nfc/activate:", err);

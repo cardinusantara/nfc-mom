@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { upsertCardProfile } from "@/lib/server/db";
 
 const CARDI_API_URL =
   process.env.CARDI_API_URL ||
@@ -10,6 +11,17 @@ export async function PUT(req: NextRequest) {
     const authHeader = req.headers.get("authorization");
     const body = await req.json();
 
+    if (!body || !body.username) {
+      return NextResponse.json(
+        { error: "Username is required to update profile" },
+        { status: 400 }
+      );
+    }
+
+    // Persist updates to local SQLite database
+    const savedProfile = upsertCardProfile(body);
+
+    // Forward to remote API if accessible
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000);
@@ -29,12 +41,12 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json(data);
       }
     } catch {
-      // Remote unavailable, return body as updated profile
+      // Remote unavailable, return local saved profile
     }
 
     return NextResponse.json({
       success: true,
-      profile: body,
+      profile: savedProfile,
     });
   } catch (err: any) {
     return NextResponse.json(

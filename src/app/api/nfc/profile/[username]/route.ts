@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProfileByUsername } from "@/lib/profiles";
+import { getCardProfileByUsername, upsertCardProfile } from "@/lib/server/db";
 
 const CARDI_API_URL =
   process.env.CARDI_API_URL ||
@@ -14,9 +14,19 @@ export async function GET(
     const { username } = await context.params;
     const cleanUser = String(username || "").toLowerCase().trim();
 
+    // 1. Check local persistent SQLite database first
+    const localProfile = getCardProfileByUsername(cleanUser);
+    if (localProfile) {
+      return NextResponse.json({
+        success: true,
+        profile: localProfile,
+      });
+    }
+
+    // 2. Fallback to remote backend if accessible
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 1000);
       const remoteRes = await fetch(`${CARDI_API_URL}/nfc/profile/${cleanUser}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
@@ -26,14 +36,28 @@ export async function GET(
 
       if (remoteRes.ok) {
         const data = await remoteRes.json();
-        return NextResponse.json(data);
+        if (data?.profile) {
+          // Cache to local database
+          const cached = upsertCardProfile(data.profile);
+          return NextResponse.json({
+            success: true,
+            profile: cached,
+          });
+        }
       }
     } catch {
-      // Remote unavailable, fallback to local registry
+      // Remote unavailable or error
     }
 
-    const localProfile = getProfileByUsername(cleanUser);
-    return NextResponse.json({ profile: localProfile });
+    // 3. User does not exist, return 404
+    return NextResponse.json(
+      {
+        error: "Profile not found",
+        username: cleanUser,
+        notFound: true,
+      },
+      { status: 404 }
+    );
   } catch (err: any) {
     return NextResponse.json(
       { error: err?.message || "Gagal mengambil data profil" },
