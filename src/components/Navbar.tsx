@@ -19,6 +19,7 @@ import {
   ExternalLink,
   ChevronDown,
   Home,
+  ShieldCheck,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { getTranslation } from "@/lib/i18n";
@@ -195,6 +196,15 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
                     </Link>
 
                     <Link
+                      href="/dashboard/admin"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition text-xs font-medium text-sky-600 dark:text-sky-400"
+                    >
+                      <span>Admin: Kelola Kartu</span>
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                    </Link>
+
+                    <Link
                       href={`/${cardProfile.username || "user"}`}
                       target="_blank"
                       onClick={() => setProfileDropdownOpen(false)}
@@ -289,6 +299,21 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
           >
             <Home className="w-4 h-4" />
             <span>Beranda Web</span>
+          </Link>
+
+          <Link
+            href="/dashboard/admin"
+            onClick={() => setMobileMenuOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition ${
+              pathname === "/dashboard/admin"
+                ? "bg-sky-600 text-white"
+                : isDark
+                ? "text-slate-300 hover:bg-white/5"
+                : "text-slate-700 hover:bg-slate-100"
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4 text-sky-400" />
+            <span>Admin: Kelola Kartu</span>
           </Link>
 
           {navItems.map((item) => {

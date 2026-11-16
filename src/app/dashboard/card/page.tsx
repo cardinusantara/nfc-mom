@@ -285,6 +285,19 @@ export default function DashboardCardPage() {
             </div>
           )}
 
+          <Link
+            href="/dashboard/admin"
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold transition ${
+              isDark
+                ? "bg-white/5 hover:bg-white/10 border-white/15 text-white/90"
+                : "bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm"
+            }`}
+            title="Buka Konsol Admin & Database Kartu"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-sky-500" />
+            <span>Kelola Semua Kartu</span>
+          </Link>
+
           <button
             onClick={handleCopyLink}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold transition ${

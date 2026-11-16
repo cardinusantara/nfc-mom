@@ -356,6 +356,14 @@ export function listAllProfiles(): CardProfile[] {
   return rows.map(rowToProfile);
 }
 
+export function deleteCardProfile(username: string): boolean {
+  const db = getDb();
+  const cleanUser = String(username || "").toLowerCase().trim();
+  const stmt = db.prepare("DELETE FROM card_profiles WHERE username = ?");
+  const result = stmt.run(cleanUser);
+  return Number(result.changes) > 0;
+}
+
 // Aliases for compatibility
 export const getProfileByUsername = getCardProfileByUsername;
 export const getProfileByTagId = getCardProfileByTagId;
