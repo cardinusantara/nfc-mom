@@ -74,6 +74,59 @@ export function normalizeSocialUrl(platform: string, input: string): string {
     return `https://x.com/${cleanHandle}`;
   }
 
+  if (lower === "tiktok") {
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed.replace(/^http:\/\//i, "https://");
+    }
+    if (/^(www\.)?tiktok\.com\//i.test(trimmed)) {
+      return `https://${trimmed}`;
+    }
+    return `https://tiktok.com/@${cleanHandle}`;
+  }
+
+  if (lower === "youtube") {
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed.replace(/^http:\/\//i, "https://");
+    }
+    if (/^(www\.)?youtube\.com\//i.test(trimmed)) {
+      return `https://${trimmed}`;
+    }
+    if (/^(www\.)?youtu\.be\//i.test(trimmed)) {
+      return `https://${trimmed}`;
+    }
+    return `https://youtube.com/@${cleanHandle}`;
+  }
+
+  if (lower === "telegram") {
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed.replace(/^http:\/\//i, "https://");
+    }
+    if (/^(www\.)?t\.me\//i.test(trimmed)) {
+      return `https://${trimmed}`;
+    }
+    return `https://t.me/${cleanHandle}`;
+  }
+
+  if (lower === "threads") {
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed.replace(/^http:\/\//i, "https://");
+    }
+    if (/^(www\.)?threads\.net\//i.test(trimmed)) {
+      return `https://${trimmed}`;
+    }
+    return `https://threads.net/@${cleanHandle}`;
+  }
+
+  if (lower === "facebook") {
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed.replace(/^http:\/\//i, "https://");
+    }
+    if (/^(www\.)?facebook\.com\//i.test(trimmed)) {
+      return `https://${trimmed}`;
+    }
+    return `https://facebook.com/${cleanHandle}`;
+  }
+
   // Generic fallback
   if (/^https?:\/\//i.test(trimmed)) {
     return trimmed;
@@ -142,25 +195,35 @@ export function generateVCard(profile: CardProfile): string {
   if (location) vCardLines.push(`ADR;TYPE=WORK:;;${location};;;;`);
 
   // Social profile extensions (X-SOCIALPROFILE standard)
-  if (profile.socials?.linkedin) {
-    const linkedinUrl = normalizeSocialUrl("linkedin", profile.socials.linkedin);
-    vCardLines.push(`X-SOCIALPROFILE;TYPE=linkedin:${linkedinUrl}`);
-  }
-  if (profile.socials?.instagram) {
-    const instagramUrl = normalizeSocialUrl("instagram", profile.socials.instagram);
-    vCardLines.push(`X-SOCIALPROFILE;TYPE=instagram:${instagramUrl}`);
-  }
-  if (profile.socials?.github) {
-    const githubUrl = normalizeSocialUrl("github", profile.socials.github);
-    vCardLines.push(`X-SOCIALPROFILE;TYPE=github:${githubUrl}`);
-  }
-  if (profile.socials?.twitter) {
-    const twitterUrl = normalizeSocialUrl("twitter", profile.socials.twitter);
-    vCardLines.push(`X-SOCIALPROFILE;TYPE=twitter:${twitterUrl}`);
-  }
-  if (profile.socials?.whatsapp) {
-    const waUrl = normalizeSocialUrl("whatsapp", profile.socials.whatsapp);
-    vCardLines.push(`X-SOCIALPROFILE;TYPE=whatsapp:${waUrl}`);
+  if (profile.socials) {
+    const knownKeys = [
+      "whatsapp",
+      "linkedin",
+      "instagram",
+      "github",
+      "twitter",
+      "tiktok",
+      "youtube",
+      "telegram",
+      "threads",
+      "facebook",
+    ];
+
+    for (const key of knownKeys) {
+      const val = profile.socials[key];
+      if (val) {
+        const normalized = normalizeSocialUrl(key, val);
+        vCardLines.push(`X-SOCIALPROFILE;TYPE=${key}:${normalized}`);
+      }
+    }
+
+    // Dynamic support for any custom social keys
+    for (const [key, val] of Object.entries(profile.socials)) {
+      if (!knownKeys.includes(key) && val) {
+        const normalized = normalizeSocialUrl(key, val);
+        vCardLines.push(`X-SOCIALPROFILE;TYPE=${key}:${normalized}`);
+      }
+    }
   }
 
   // Include avatar URI if present and not an oversized data URL

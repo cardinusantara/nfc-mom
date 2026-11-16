@@ -146,6 +146,12 @@ export interface CardProfile {
     instagram?: string;
     github?: string;
     twitter?: string;
+    tiktok?: string;
+    youtube?: string;
+    telegram?: string;
+    facebook?: string;
+    threads?: string;
+    [key: string]: string | undefined;
   };
   metrics: {
     totalTaps: number;

@@ -91,6 +91,46 @@ function WhatsAppBrandIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
+function TikTokBrandIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.29 0 .58.04.86.12V9.41a6.33 6.33 0 0 0-.86-.06 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34c3.4 0 6.18-2.68 6.32-6.04V9.09a8.19 8.19 0 0 0 4.79 1.52V7.16a4.84 4.84 0 0 1-1-.47z" />
+    </svg>
+  );
+}
+
+function YouTubeBrandIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+    </svg>
+  );
+}
+
+function TelegramBrandIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .36z" />
+    </svg>
+  );
+}
+
+function FacebookBrandIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+    </svg>
+  );
+}
+
+function ThreadsBrandIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M12.001 2c-5.522 0-9.999 4.477-9.999 9.999 0 5.523 4.477 10.001 9.999 10.001 5.523 0 10.001-4.478 10.001-10.001C22.002 6.477 17.524 2 12.001 2zm4.35 12.443c-.225 1.77-1.439 3.033-3.218 3.033-1.995 0-3.376-1.503-3.376-3.704 0-2.316 1.543-3.805 3.518-3.805 1.599 0 2.721.937 2.87 2.274h-1.637c-.126-.554-.623-.949-1.233-.949-.966 0-1.745.838-1.745 2.48 0 1.564.73 2.378 1.632 2.378.793 0 1.332-.477 1.488-1.307h-1.488v-1.326h3.189v3.926z" />
+    </svg>
+  );
+}
+
 export default function PublicCardPage() {
   return (
     <React.Suspense
@@ -406,16 +446,28 @@ function PublicCardContent() {
     );
 
     try {
-      const vCardContent = generateVCard(cardProfile);
-      const fileName = getVCardFileName(cardProfile);
-      const blob = new Blob([vCardContent], { type: "text/vcard;charset=utf-8" });
-
       // Track metric asynchronously if api is available
       if (username) {
         cardiApi.recordContactSave(username).catch(() => {});
       }
 
-      // Check for Web Share API file sharing support (iOS Safari & Android Chrome)
+      // Direct inline navigation for iOS Safari to trigger native contact prompt immediately
+      const isIOS =
+        typeof navigator !== "undefined" &&
+        (/iPad|iPhone|iPod/.test(navigator.userAgent || "") ||
+          (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+
+      if (isIOS) {
+        window.location.href = `/api/vcard/${encodeURIComponent(cardProfile.username || username)}`;
+        setIsSavingContact(false);
+        return;
+      }
+
+      const vCardContent = generateVCard(cardProfile);
+      const fileName = getVCardFileName(cardProfile);
+      const blob = new Blob([vCardContent], { type: "text/vcard;charset=utf-8" });
+
+      // Check for Web Share API file sharing support (Android Chrome & compatible mobile browsers)
       const file = new File([blob], fileName, { type: "text/vcard" });
       if (
         typeof navigator !== "undefined" &&
@@ -777,8 +829,8 @@ function PublicCardContent() {
         >
           {/* Avatar with Status Ring (Enlarged for Executive Prominence) */}
           <div className="relative mb-3.5">
-            <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full p-[3px] bg-gradient-to-b from-slate-200 via-slate-400 to-slate-600 dark:from-white/30 dark:via-white/15 dark:to-white/5 shadow-lg">
-              <div className="w-full h-full rounded-full overflow-hidden bg-[#0A1633] flex items-center justify-center font-black text-3xl sm:text-4xl text-white">
+            <div className="w-44 h-44 sm:w-52 sm:h-52 rounded-full p-[4px] bg-gradient-to-b from-slate-200 via-slate-400 to-slate-600 dark:from-white/30 dark:via-white/15 dark:to-white/5 shadow-2xl">
+              <div className="w-full h-full rounded-full overflow-hidden bg-[#0A1633] flex items-center justify-center font-black text-5xl sm:text-6xl text-white">
                 {cardProfile.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -798,10 +850,10 @@ function PublicCardContent() {
               </div>
             </div>
             <div
-              className="absolute bottom-1.5 right-1.5 bg-[#10B981] border-[3px] border-[#0E1A33] w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shadow-md"
+              className="absolute bottom-2 right-2 bg-[#10B981] border-[3px] border-[#0E1A33] w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-lg"
               title="Chip NFC Aktif"
             >
-              <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white stroke-[3]" />
+              <Check className="w-5 h-5 text-white stroke-[3]" />
             </div>
           </div>
 
@@ -954,45 +1006,101 @@ function PublicCardContent() {
 
             {/* Tautan & Media Sosial Section */}
             {(() => {
+              let parsedSocials: Record<string, string | undefined> = {};
+              if (typeof cardProfile.socials === "string") {
+                try {
+                  parsedSocials = JSON.parse(cardProfile.socials);
+                } catch {
+                  parsedSocials = {};
+                }
+              } else if (cardProfile.socials && typeof cardProfile.socials === "object") {
+                parsedSocials = cardProfile.socials as Record<string, string | undefined>;
+              }
+
+              // Auto-fallback WhatsApp from cardProfile.phone if not explicitly set in socials
+              const waTarget =
+                parsedSocials.whatsapp ||
+                (cardProfile.phone && cardProfile.phone.trim() ? cardProfile.phone.trim() : undefined);
+
               const socialItems = [
-                cardProfile.socials?.linkedin
+                waTarget
+                  ? {
+                      name: "WhatsApp",
+                      url: normalizeSocialUrl("whatsapp", waTarget),
+                      icon: <WhatsAppBrandIcon className="w-4 h-4 text-[#25D366]" />,
+                      badgeHover: "hover:border-[#25D366]/40 hover:bg-[#25D366]/10",
+                    }
+                  : null,
+                parsedSocials.linkedin
                   ? {
                       name: "LinkedIn",
-                      url: normalizeSocialUrl("linkedin", cardProfile.socials.linkedin),
+                      url: normalizeSocialUrl("linkedin", parsedSocials.linkedin),
                       icon: <LinkedInBrandIcon className="w-4 h-4 text-[#0A66C2]" />,
                       badgeHover: "hover:border-[#0A66C2]/40 hover:bg-[#0A66C2]/10",
                     }
                   : null,
-                cardProfile.socials?.instagram
+                parsedSocials.instagram
                   ? {
                       name: "Instagram",
-                      url: normalizeSocialUrl("instagram", cardProfile.socials.instagram),
+                      url: normalizeSocialUrl("instagram", parsedSocials.instagram),
                       icon: <InstagramBrandIcon className="w-4 h-4 text-[#E4405F]" />,
                       badgeHover: "hover:border-[#E4405F]/40 hover:bg-[#E4405F]/10",
                     }
                   : null,
-                cardProfile.socials?.github
+                parsedSocials.tiktok
                   ? {
-                      name: "GitHub",
-                      url: normalizeSocialUrl("github", cardProfile.socials.github),
-                      icon: <GitHubBrandIcon className="w-4 h-4 text-slate-800 dark:text-slate-200" />,
+                      name: "TikTok",
+                      url: normalizeSocialUrl("tiktok", parsedSocials.tiktok),
+                      icon: <TikTokBrandIcon className="w-4 h-4 text-slate-900 dark:text-white" />,
+                      badgeHover: "hover:border-pink-500/40 hover:bg-pink-500/10",
+                    }
+                  : null,
+                parsedSocials.youtube
+                  ? {
+                      name: "YouTube",
+                      url: normalizeSocialUrl("youtube", parsedSocials.youtube),
+                      icon: <YouTubeBrandIcon className="w-4 h-4 text-[#FF0000]" />,
+                      badgeHover: "hover:border-[#FF0000]/40 hover:bg-[#FF0000]/10",
+                    }
+                  : null,
+                parsedSocials.telegram
+                  ? {
+                      name: "Telegram",
+                      url: normalizeSocialUrl("telegram", parsedSocials.telegram),
+                      icon: <TelegramBrandIcon className="w-4 h-4 text-[#24A1DE]" />,
+                      badgeHover: "hover:border-[#24A1DE]/40 hover:bg-[#24A1DE]/10",
+                    }
+                  : null,
+                parsedSocials.threads
+                  ? {
+                      name: "Threads",
+                      url: normalizeSocialUrl("threads", parsedSocials.threads),
+                      icon: <ThreadsBrandIcon className="w-4 h-4 text-slate-900 dark:text-white" />,
                       badgeHover: "hover:border-slate-500/40 hover:bg-slate-500/10",
                     }
                   : null,
-                cardProfile.socials?.twitter
+                parsedSocials.facebook
+                  ? {
+                      name: "Facebook",
+                      url: normalizeSocialUrl("facebook", parsedSocials.facebook),
+                      icon: <FacebookBrandIcon className="w-4 h-4 text-[#1877F2]" />,
+                      badgeHover: "hover:border-[#1877F2]/40 hover:bg-[#1877F2]/10",
+                    }
+                  : null,
+                parsedSocials.twitter
                   ? {
                       name: "Twitter / X",
-                      url: normalizeSocialUrl("twitter", cardProfile.socials.twitter),
+                      url: normalizeSocialUrl("twitter", parsedSocials.twitter),
                       icon: <TwitterBrandIcon className="w-4 h-4 text-slate-900 dark:text-white" />,
                       badgeHover: "hover:border-sky-500/40 hover:bg-sky-500/10",
                     }
                   : null,
-                cardProfile.socials?.whatsapp
+                parsedSocials.github
                   ? {
-                      name: "WhatsApp",
-                      url: normalizeSocialUrl("whatsapp", cardProfile.socials.whatsapp),
-                      icon: <WhatsAppBrandIcon className="w-4 h-4 text-[#25D366]" />,
-                      badgeHover: "hover:border-[#25D366]/40 hover:bg-[#25D366]/10",
+                      name: "GitHub",
+                      url: normalizeSocialUrl("github", parsedSocials.github),
+                      icon: <GitHubBrandIcon className="w-4 h-4 text-slate-800 dark:text-slate-200" />,
+                      badgeHover: "hover:border-slate-500/40 hover:bg-slate-500/10",
                     }
                   : null,
               ].filter(Boolean) as {

@@ -1042,6 +1042,31 @@ export default function DashboardCardPage() {
                 <div className="space-y-3.5 text-xs">
                   <div>
                     <label className="text-[10px] font-bold uppercase tracking-wider opacity-60 block mb-1">
+                      WhatsApp (Nomor atau Link)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="08123456789 atau https://wa.me/628123456789"
+                      value={editForm.socials?.whatsapp || ""}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          socials: {
+                            ...editForm.socials,
+                            whatsapp: e.target.value,
+                          },
+                        })
+                      }
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
+                        isDark
+                          ? "bg-[#070D1E] border-white/15 text-white"
+                          : "bg-slate-50 border-slate-300 text-slate-900"
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider opacity-60 block mb-1">
                       LinkedIn URL
                     </label>
                     <input
@@ -1079,6 +1104,81 @@ export default function DashboardCardPage() {
                           socials: {
                             ...editForm.socials,
                             instagram: e.target.value,
+                          },
+                        })
+                      }
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
+                        isDark
+                          ? "bg-[#070D1E] border-white/15 text-white"
+                          : "bg-slate-50 border-slate-300 text-slate-900"
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider opacity-60 block mb-1">
+                      TikTok URL
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="https://tiktok.com/@username atau @username"
+                      value={editForm.socials?.tiktok || ""}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          socials: {
+                            ...editForm.socials,
+                            tiktok: e.target.value,
+                          },
+                        })
+                      }
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
+                        isDark
+                          ? "bg-[#070D1E] border-white/15 text-white"
+                          : "bg-slate-50 border-slate-300 text-slate-900"
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider opacity-60 block mb-1">
+                      YouTube URL
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="https://youtube.com/@channel"
+                      value={editForm.socials?.youtube || ""}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          socials: {
+                            ...editForm.socials,
+                            youtube: e.target.value,
+                          },
+                        })
+                      }
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
+                        isDark
+                          ? "bg-[#070D1E] border-white/15 text-white"
+                          : "bg-slate-50 border-slate-300 text-slate-900"
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider opacity-60 block mb-1">
+                      Telegram URL
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="https://t.me/username atau @username"
+                      value={editForm.socials?.telegram || ""}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          socials: {
+                            ...editForm.socials,
+                            telegram: e.target.value,
                           },
                         })
                       }
