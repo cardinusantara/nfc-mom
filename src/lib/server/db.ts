@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import type { CardProfile } from "@/lib/types";
+import type { CardProfile, ContactLead } from "@/lib/types";
 
 function resolveDbPath(): string {
   if (process.env.DATABASE_PATH) {
@@ -34,6 +34,18 @@ interface DbRow {
   updatedAt: string;
 }
 
+interface LeadRow {
+  id: string;
+  cardUsername: string;
+  name: string;
+  phone: string;
+  email: string;
+  company: string;
+  notes: string;
+  status: string;
+  createdAt: string;
+}
+
 const globalForDb = globalThis as unknown as {
   __cardi_db?: DatabaseSync;
 };
@@ -62,6 +74,20 @@ function initSchemaAndSeed(db: DatabaseSync): void {
     );
     CREATE INDEX IF NOT EXISTS idx_card_profiles_tagId ON card_profiles(tagId);
     CREATE INDEX IF NOT EXISTS idx_card_profiles_email ON card_profiles(email);
+
+    CREATE TABLE IF NOT EXISTS leads (
+      id TEXT PRIMARY KEY,
+      cardUsername TEXT NOT NULL COLLATE NOCASE,
+      name TEXT NOT NULL,
+      phone TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL DEFAULT '',
+      company TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'warm',
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_leads_cardUsername ON leads(cardUsername);
+    CREATE INDEX IF NOT EXISTS idx_leads_createdAt ON leads(createdAt);
   `);
 
   // Check if seed user 'deo' exists
@@ -367,3 +393,131 @@ export function deleteCardProfile(username: string): boolean {
 // Aliases for compatibility
 export const getProfileByUsername = getCardProfileByUsername;
 export const getProfileByTagId = getCardProfileByTagId;
+
+export function rowToLead(row: LeadRow): ContactLead {
+  return {
+    id: row.id,
+    name: row.name,
+    company: row.company || "",
+    phone: row.phone || "",
+    email: row.email || "",
+    notes: row.notes || undefined,
+    status: (row.status || "warm") as ContactLead["status"],
+    createdAt: row.createdAt,
+    tappedAt: row.createdAt,
+  };
+}
+
+export function saveLead(data: {
+  id?: string;
+  cardUsername: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  company?: string;
+  notes?: string;
+  status?: string;
+}): ContactLead {
+  const db = getDb();
+  const cleanUser = String(data.cardUsername || "").toLowerCase().trim();
+  const leadId = data.id || `lead_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const nowIso = new Date().toISOString();
+
+  const insertStmt = db.prepare(`
+    INSERT INTO leads (
+      id, cardUsername, name, phone, email, company, notes, status, createdAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertStmt.run(
+    leadId,
+    cleanUser,
+    data.name.trim(),
+    (data.phone || "").trim(),
+    (data.email || "").trim(),
+    (data.company || "").trim(),
+    (data.notes || "").trim(),
+    data.status || "warm",
+    nowIso
+  );
+
+  // Increment contactsSaved in card_profiles if profile exists
+  recordContactSaveEvent(cleanUser);
+
+  return {
+    id: leadId,
+    name: data.name.trim(),
+    company: (data.company || "").trim(),
+    phone: (data.phone || "").trim(),
+    email: (data.email || "").trim(),
+    notes: (data.notes || "").trim() || undefined,
+    status: (data.status || "warm") as ContactLead["status"],
+    createdAt: nowIso,
+    tappedAt: nowIso,
+  };
+}
+
+export function getLeadsByUsername(username: string): ContactLead[] {
+  const db = getDb();
+  const cleanUser = String(username || "").toLowerCase().trim();
+  const stmt = db.prepare("SELECT * FROM leads WHERE cardUsername = ? ORDER BY createdAt DESC");
+  const rows = stmt.all(cleanUser) as LeadRow[];
+  return rows.map(rowToLead);
+}
+
+export function getAllLeads(): ContactLead[] {
+  const db = getDb();
+  const stmt = db.prepare("SELECT * FROM leads ORDER BY createdAt DESC");
+  const rows = stmt.all() as LeadRow[];
+  return rows.map(rowToLead);
+}
+
+export function recordTapEvent(username: string): { success: boolean; totalTaps: number } {
+  const db = getDb();
+  const cleanUser = String(username || "").toLowerCase().trim();
+  const existing = getCardProfileByUsername(cleanUser);
+  if (!existing) {
+    return { success: false, totalTaps: 0 };
+  }
+
+  const currentTaps = Number(existing.metrics?.totalTaps || 0) + 1;
+  const updatedMetrics = {
+    ...existing.metrics,
+    totalTaps: currentTaps,
+  };
+
+  const updateStmt = db.prepare(`
+    UPDATE card_profiles SET
+      metrics = ?,
+      updatedAt = ?
+    WHERE username = ?
+  `);
+  updateStmt.run(JSON.stringify(updatedMetrics), new Date().toISOString(), cleanUser);
+
+  return { success: true, totalTaps: currentTaps };
+}
+
+export function recordContactSaveEvent(username: string): { success: boolean; contactsSaved: number } {
+  const db = getDb();
+  const cleanUser = String(username || "").toLowerCase().trim();
+  const existing = getCardProfileByUsername(cleanUser);
+  if (!existing) {
+    return { success: false, contactsSaved: 0 };
+  }
+
+  const currentSaved = Number(existing.metrics?.contactsSaved || 0) + 1;
+  const updatedMetrics = {
+    ...existing.metrics,
+    contactsSaved: currentSaved,
+  };
+
+  const updateStmt = db.prepare(`
+    UPDATE card_profiles SET
+      metrics = ?,
+      updatedAt = ?
+    WHERE username = ?
+  `);
+  updateStmt.run(JSON.stringify(updatedMetrics), new Date().toISOString(), cleanUser);
+
+  return { success: true, contactsSaved: currentSaved };
+}

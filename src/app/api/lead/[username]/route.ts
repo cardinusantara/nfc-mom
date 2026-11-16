@@ -1,4 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { saveLead, getLeadsByUsername } from "@/lib/server/db";
+
+export async function GET(
+  _request: NextRequest,
+  context: { params: Promise<{ username: string }> }
+) {
+  try {
+    const { username } = await context.params;
+    const cleanUser = String(username || "").toLowerCase().trim();
+    const leads = getLeadsByUsername(cleanUser);
+
+    return NextResponse.json({
+      success: true,
+      username: cleanUser,
+      leads,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Gagal mengambil daftar kontak lead" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(
   request: NextRequest,
@@ -8,7 +31,7 @@ export async function POST(
     const { username } = await context.params;
     const body = await request.json();
 
-    const { name, phone, email, notes, company } = body || {};
+    const { name, phone, email, notes, company, status } = body || {};
 
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json(
@@ -17,35 +40,36 @@ export async function POST(
       );
     }
 
-    const leadRecord = {
-      username,
+    const cleanUser = String(username || "").toLowerCase().trim();
+
+    // 1. Save directly into local persistent SQLite database
+    const savedLead = saveLead({
+      cardUsername: cleanUser,
       name: name.trim(),
       phone: phone ? String(phone).trim() : "",
       email: email ? String(email).trim() : "",
       company: company ? String(company).trim() : "",
       notes: notes ? String(notes).trim() : "",
-      tappedAt: new Date().toISOString(),
-    };
+      status: status || "warm",
+    });
 
-    // Forward to backend API if configured
+    // 2. Forward to remote backend API if configured
     const apiBase = process.env.NEXT_PUBLIC_CARDI_API_BASE_URL || "https://api.cardi.co.id";
     try {
-      await fetch(`${apiBase}/nfc/profile/${encodeURIComponent(username)}/lead`, {
+      await fetch(`${apiBase}/nfc/profile/${encodeURIComponent(cleanUser)}/lead`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(leadRecord),
-        signal: AbortSignal.timeout(4000),
-      }).catch(() => {
-        // Silently tolerate if backend lead queue is pending deployment
-      });
+        body: JSON.stringify(savedLead),
+        signal: AbortSignal.timeout(3000),
+      }).catch(() => {});
     } catch {
       // Backend not yet reachable; proceed
     }
 
     return NextResponse.json({
       success: true,
-      message: "Kontak berhasil dikirim ke pemilik kartu.",
-      lead: leadRecord,
+      message: "Kontak berhasil disimpan.",
+      lead: savedLead,
     });
   } catch (error) {
     return NextResponse.json(

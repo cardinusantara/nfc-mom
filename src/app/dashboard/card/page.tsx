@@ -35,6 +35,7 @@ import {
   Image as ImageIcon,
   Crop,
   Trash2,
+  Download,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { ContactLead } from "@/lib/types";
@@ -49,6 +50,7 @@ export default function DashboardCardPage() {
     cardProfile,
     updateCardProfile,
     leads,
+    setLeads,
     theme,
     locale,
     account,
@@ -108,6 +110,46 @@ export default function DashboardCardPage() {
   useEffect(() => {
     setEditForm(cardProfile);
   }, [cardProfile]);
+
+  useEffect(() => {
+    if (!cardProfile.username || cardProfile.username === "user") return;
+    const fetchLeads = async () => {
+      try {
+        const res = await fetch(`/api/lead/${encodeURIComponent(cardProfile.username)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.leads)) {
+            setLeads(data.leads);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch leads:", err);
+      }
+    };
+    fetchLeads();
+  }, [cardProfile.username, setLeads]);
+
+  const exportLeadsToCsv = () => {
+    if (leads.length === 0) return;
+    const headers = ["Nama", "Perusahaan", "No. HP", "Email", "Catatan", "Status", "Waktu Simpan"];
+    const rows = leads.map((l) => [
+      `"${(l.name || "").replace(/"/g, '""')}"`,
+      `"${(l.company || "").replace(/"/g, '""')}"`,
+      `"${(l.phone || "").replace(/"/g, '""')}"`,
+      `"${(l.email || "").replace(/"/g, '""')}"`,
+      `"${(l.notes || "").replace(/"/g, '""')}"`,
+      `"${(l.status || "warm").replace(/"/g, '""')}"`,
+      `"${new Date(l.createdAt || Date.now()).toISOString()}"`,
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `cardi_leads_${cardProfile.username || "kartu"}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   useEffect(() => {
     if (!cardProfile.username || cardProfile.username === "user") return;
@@ -1366,6 +1408,22 @@ export default function DashboardCardPage() {
                 }`}
               />
             </div>
+            <button
+              type="button"
+              onClick={exportLeadsToCsv}
+              disabled={leads.length === 0}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition ${
+                leads.length === 0
+                  ? "opacity-40 cursor-not-allowed border-slate-300 dark:border-white/10"
+                  : isDark
+                  ? "bg-white/5 hover:bg-white/10 border-white/15 text-white"
+                  : "bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm"
+              }`}
+              title="Ekspor daftar prospek ke file CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export CSV</span>
+            </button>
           </div>
         </div>
 

@@ -43,6 +43,7 @@ interface AppState {
   // Contacts / Leads
   contacts: ContactLead[];
   leads: ContactLead[]; // alias for convenience
+  setLeads: (leads: ContactLead[]) => void;
   addContact: (contact: ContactLead) => void;
   updateContactStatus: (id: string, status: "hot" | "warm" | "cold") => void;
 
@@ -308,6 +309,7 @@ export const useAppStore = create<AppState>()(
       // Leads / Contacts (Clean Zero)
       contacts: [],
       leads: [],
+      setLeads: (leads) => set({ leads, contacts: leads }),
       addContact: (contact) =>
         set((state) => {
           const updated = [contact, ...state.contacts];

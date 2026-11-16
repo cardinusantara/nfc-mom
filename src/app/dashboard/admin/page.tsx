@@ -23,6 +23,7 @@ import {
   QrCode,
   Tag,
   ArrowUpDown,
+  Download,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { CardProfile } from "@/lib/types";
@@ -143,6 +144,51 @@ export default function AdminDashboardPage() {
     });
   }, [profiles, searchQuery, statusFilter]);
 
+  const exportCardsToCsv = () => {
+    if (profiles.length === 0) return;
+    const headers = [
+      "Username",
+      "Tag ID",
+      "Nama Lengkap",
+      "Headline",
+      "Perusahaan",
+      "Email",
+      "No. HP",
+      "Status Aktivasi",
+      "Total Taps",
+      "Kontak Tersimpan",
+      "MoM Diinisiasi",
+      "Dibuat",
+    ];
+    const rows = profiles.map((p) => [
+      `"${(p.username || "").replace(/"/g, '""')}"`,
+      `"${(p.tagId || "").replace(/"/g, '""')}"`,
+      `"${(p.fullName || "").replace(/"/g, '""')}"`,
+      `"${(p.headline || "").replace(/"/g, '""')}"`,
+      `"${(p.company || "").replace(/"/g, '""')}"`,
+      `"${(p.email || "").replace(/"/g, '""')}"`,
+      `"${(p.phone || "").replace(/"/g, '""')}"`,
+      `"${p.isActivated ? "Aktif" : "Nonaktif"}"`,
+      `"${p.metrics?.totalTaps ?? 0}"`,
+      `"${p.metrics?.contactsSaved ?? 0}"`,
+      `"${p.metrics?.momInitiated ?? 0}"`,
+      `"${p.createdAt ? new Date(p.createdAt).toISOString() : ""}"`,
+    ]);
+    const csvContent =
+      "data:text/csv;charset=utf-8,\uFEFF" +
+      [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `cardi_semua_kartu_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const stats = useMemo(() => {
     const total = profiles.length;
     const active = profiles.filter((p) => p.isActivated).length;
@@ -209,6 +255,23 @@ export default function AdminDashboardPage() {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
             <span>Segarkan Data</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={exportCardsToCsv}
+            disabled={profiles.length === 0}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition ${
+              profiles.length === 0
+                ? "opacity-40 cursor-not-allowed border-slate-300 dark:border-white/10"
+                : isDark
+                ? "bg-white/5 hover:bg-white/10 border-white/15 text-white"
+                : "bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-xs"
+            }`}
+            title="Ekspor seluruh data kartu ke file CSV"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
           </button>
 
           <Link
