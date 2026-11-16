@@ -1,10 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
-import { upsertCardProfile } from "@/lib/server/db";
+import { upsertCardProfile, getCardProfileByUsername } from "@/lib/server/db";
 
 const CARDI_API_URL =
   process.env.CARDI_API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   "https://fuldtvg7vk.execute-api.ap-southeast-1.amazonaws.com";
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const username = searchParams.get("username");
+
+    if (!username) {
+      return NextResponse.json(
+        { error: "Username parameter is required" },
+        { status: 400 }
+      );
+    }
+
+    const localProfile = getCardProfileByUsername(username);
+    if (localProfile) {
+      return NextResponse.json({
+        success: true,
+        profile: localProfile,
+      });
+    }
+
+    // Try remote backend if not found locally
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(`${CARDI_API_URL}/nfc/profile?username=${encodeURIComponent(username)}`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        return NextResponse.json(data);
+      }
+    } catch {
+      // Remote unavailable
+    }
+
+    return NextResponse.json(
+      { error: "Profil tidak ditemukan" },
+      { status: 404 }
+    );
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err?.message || "Gagal memuat profil" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PUT(req: NextRequest) {
   try {

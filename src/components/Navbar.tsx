@@ -48,6 +48,12 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
   const t = getTranslation(locale);
   const isDark = theme === "dark";
 
+  const hasActiveCard = Boolean(
+    cardProfile?.isActivated ||
+    Boolean(cardProfile?.tagId && cardProfile.tagId.trim().length > 0) ||
+    Boolean(cardProfile?.username && cardProfile.username.trim().length > 0 && cardProfile.username !== "user")
+  );
+
   const navItems = [
     { label: t.nav.card, href: "/dashboard/card", icon: CreditCard },
     { label: t.nav.mom, href: "/dashboard/mom", icon: Mic },
@@ -67,7 +73,7 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Left: Brand with Official MoM Logo */}
         <div className="flex items-center gap-8">
-          <Link href={sessionToken ? "/dashboard/card" : "/"} className="flex items-center group">
+          <Link href="/" className="flex items-center group" title="Beranda Cardi NFC">
             <CardiMomLogo size="sm" colorMode={isDark ? "dark" : "light"} showTagline={false} />
           </Link>
 
@@ -238,13 +244,15 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
           )}
 
           {/* Activate CTA (Desktop) */}
-          <Link
-            href="/activate"
-            className="hidden lg:flex items-center gap-1.5 bg-gradient-to-r from-sky-600 to-cyan-500 hover:from-sky-700 hover:to-cyan-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-xs transition"
-          >
-            <Radio className="w-3 h-3 text-cyan-200 animate-pulse" />
-            <span>Aktivasi Kartu</span>
-          </Link>
+          {!hasActiveCard && (
+            <Link
+              href="/activate"
+              className="hidden lg:flex items-center gap-1.5 bg-gradient-to-r from-sky-600 to-cyan-500 hover:from-sky-700 hover:to-cyan-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-xs transition"
+            >
+              <Radio className="w-3 h-3 text-cyan-200 animate-pulse" />
+              <span>Aktivasi Kartu</span>
+            </Link>
+          )}
 
           {/* Mobile Menu Hamburger */}
           <button
@@ -268,6 +276,21 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
             isDark ? "bg-[#0A0E17] border-white/10" : "bg-white border-slate-200 shadow-md"
           }`}
         >
+          <Link
+            href="/"
+            onClick={() => setMobileMenuOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition ${
+              pathname === "/"
+                ? "bg-sky-600 text-white"
+                : isDark
+                ? "text-slate-300 hover:bg-white/5"
+                : "text-slate-700 hover:bg-slate-100"
+            }`}
+          >
+            <Home className="w-4 h-4" />
+            <span>Beranda Web</span>
+          </Link>
+
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname.startsWith(item.href);
@@ -290,14 +313,16 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
             );
           })}
 
-          <Link
-            href="/activate"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-sky-600 to-cyan-500 text-white py-3 rounded-xl text-xs font-bold shadow-sm"
-          >
-            <Radio className="w-4 h-4 text-cyan-200 animate-pulse" />
-            <span>Aktivasi Kartu Fisik</span>
-          </Link>
+          {!hasActiveCard && (
+            <Link
+              href="/activate"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-sky-600 to-cyan-500 text-white py-3 rounded-xl text-xs font-bold shadow-sm"
+            >
+              <Radio className="w-4 h-4 text-cyan-200 animate-pulse" />
+              <span>Aktivasi Kartu Fisik</span>
+            </Link>
+          )}
         </div>
       )}
       </header>

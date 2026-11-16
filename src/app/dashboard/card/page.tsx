@@ -58,10 +58,11 @@ export default function DashboardCardPage() {
   const isDark = theme === "dark";
   const t = getTranslation(locale);
 
-  // Active Card Status determination: true only if card is activated or has a valid hardware tag
+  // Active Card Status determination: true if activated, chip tagged, or profile has registered username
   const hasActiveCard = Boolean(
     cardProfile.isActivated ||
-    Boolean(cardProfile.tagId && cardProfile.tagId.trim().length > 0)
+    Boolean(cardProfile.tagId && cardProfile.tagId.trim().length > 0) ||
+    Boolean(cardProfile.username && cardProfile.username.trim().length > 0 && cardProfile.username !== "user")
   );
 
   // States
@@ -107,6 +108,24 @@ export default function DashboardCardPage() {
   useEffect(() => {
     setEditForm(cardProfile);
   }, [cardProfile]);
+
+  useEffect(() => {
+    if (!cardProfile.username || cardProfile.username === "user") return;
+    const syncProfileFromDb = async () => {
+      try {
+        const res = await fetch(`/api/nfc/profile?username=${encodeURIComponent(cardProfile.username)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.profile) {
+            updateCardProfile(data.profile);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch fresh profile from DB:", err);
+      }
+    };
+    syncProfileFromDb();
+  }, [cardProfile.username, updateCardProfile]);
 
   const cardPublicUrl =
     typeof window !== "undefined"
@@ -251,7 +270,7 @@ export default function DashboardCardPage() {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          {!hasActiveCard && (
+          {!hasActiveCard ? (
             <Link
               href="/activate"
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#00C2D1]/15 hover:bg-[#00C2D1]/25 border border-[#00C2D1]/30 text-xs font-bold text-[#00C2D1] transition shadow-sm"
@@ -259,6 +278,11 @@ export default function DashboardCardPage() {
               <Radio className="w-3.5 h-3.5" />
               <span>{t.cardDash.btnStartActivate}</span>
             </Link>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Kartu Digital Aktif</span>
+            </div>
           )}
 
           <button
