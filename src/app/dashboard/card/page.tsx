@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
-  CreditCard,
   Radio,
   ExternalLink,
   Copy,
@@ -15,21 +14,10 @@ import {
   Edit3,
   Save,
   Sparkles,
-  Smartphone,
-  Share2,
   TrendingUp,
   Coins,
-  Globe,
-  Mail,
-  Phone,
-  MapPin,
-  Building,
-  RotateCw,
   Search,
-  Filter,
-  Info,
   X,
-  ChevronRight,
   ShieldCheck,
   Camera,
   Image as ImageIcon,
@@ -43,7 +31,7 @@ import { getTranslation } from "@/lib/i18n";
 import { cardiApi } from "@/lib/api";
 import AudioRecordModal from "@/components/AudioRecordModal";
 import { PhotoCropModal } from "@/components/PhotoCropModal";
-import { CardiMomIcon } from "@/components/CardiMomLogo";
+import { isAdminEmail } from "@/lib/adminAuth";
 
 export default function DashboardCardPage() {
   const {
@@ -59,6 +47,13 @@ export default function DashboardCardPage() {
 
   const isDark = theme === "dark";
   const t = getTranslation(locale);
+
+  const isAdmin = Boolean(
+    sessionToken &&
+    sessionToken.trim().length > 0 &&
+    account?.email &&
+    isAdminEmail(account.email)
+  );
 
   // Active Card Status determination: true if activated, chip tagged, or profile has registered username
   const hasActiveCard = Boolean(
@@ -107,9 +102,11 @@ export default function DashboardCardPage() {
   const [searchLeadQuery, setSearchLeadQuery] = useState("");
   const [selectedLeadStatus, setSelectedLeadStatus] = useState<"all" | "hot" | "warm" | "cold">("all");
 
-  useEffect(() => {
+  const [prevCardProfile, setPrevCardProfile] = useState(cardProfile);
+  if (cardProfile !== prevCardProfile) {
+    setPrevCardProfile(cardProfile);
     setEditForm(cardProfile);
-  }, [cardProfile]);
+  }
 
   useEffect(() => {
     if (!cardProfile.username || cardProfile.username === "user") return;
@@ -327,18 +324,20 @@ export default function DashboardCardPage() {
             </div>
           )}
 
-          <Link
-            href="/dashboard/admin"
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold transition ${
-              isDark
-                ? "bg-white/5 hover:bg-white/10 border-white/15 text-white/90"
-                : "bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm"
-            }`}
-            title="Buka Konsol Admin & Database Kartu"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-sky-500" />
-            <span>Kelola Semua Kartu</span>
-          </Link>
+          {isAdmin && (
+            <Link
+              href="/dashboard/admin"
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold transition ${
+                isDark
+                  ? "bg-white/5 hover:bg-white/10 border-white/15 text-white/90"
+                  : "bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm"
+              }`}
+              title="Buka Konsol Admin & Database Kartu"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-sky-500" />
+              <span>Kelola Semua Kartu</span>
+            </Link>
+          )}
 
           <button
             onClick={handleCopyLink}

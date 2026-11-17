@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
   ShieldCheck,
+  ShieldAlert,
   CreditCard,
-  Users,
   Radio,
   Search,
   RefreshCw,
@@ -16,21 +16,26 @@ import {
   TrendingUp,
   Mic,
   AlertCircle,
-  ToggleLeft,
-  ToggleRight,
   Phone,
   Mail,
-  QrCode,
   Tag,
-  ArrowUpDown,
   Download,
 } from "lucide-react";
-import { useAppStore } from "@/lib/store";
+import { useAppStore, useAuthSession } from "@/lib/store";
+import { isAdminEmail } from "@/lib/adminAuth";
 import type { CardProfile } from "@/lib/types";
 
 export default function AdminDashboardPage() {
   const { theme } = useAppStore();
+  const { hasHydrated, isAuthenticated, account, sessionToken } = useAuthSession();
   const isDark = theme === "dark";
+
+  const isAdmin = Boolean(
+    hasHydrated &&
+    isAuthenticated &&
+    account?.email &&
+    isAdminEmail(account.email)
+  );
 
   const [profiles, setProfiles] = useState<CardProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,11 +46,17 @@ export default function AdminDashboardPage() {
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const fetchCards = async () => {
+  const fetchCards = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/cards", { cache: "no-store" });
+      const res = await fetch("/api/admin/cards", {
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${sessionToken || ""}`,
+          "x-admin-email": account?.email || "",
+        },
+      });
       const data = await res.json();
       if (res.ok && data.success) {
         setProfiles(data.profiles || []);
@@ -57,11 +68,40 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sessionToken, account]);
 
   useEffect(() => {
-    fetchCards();
-  }, []);
+    let ignore = false;
+    if (isAdmin) {
+      fetch("/api/admin/cards", {
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${sessionToken || ""}`,
+          "x-admin-email": account?.email || "",
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (!ignore) {
+            if (data.success) {
+              setProfiles(data.profiles || []);
+            } else {
+              setError(data.error || "Gagal mengambil daftar kartu dari database");
+            }
+            setLoading(false);
+          }
+        })
+        .catch(() => {
+          if (!ignore) {
+            setError("Koneksi ke server database terputus");
+            setLoading(false);
+          }
+        });
+    }
+    return () => {
+      ignore = true;
+    };
+  }, [isAdmin, sessionToken, account]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -74,7 +114,11 @@ export default function AdminDashboardPage() {
       const nextStatus = !profile.isActivated;
       const res = await fetch("/api/admin/cards", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken || ""}`,
+          "x-admin-email": account?.email || "",
+        },
         body: JSON.stringify({
           username: profile.username,
           isActivated: nextStatus,
@@ -107,7 +151,13 @@ export default function AdminDashboardPage() {
     try {
       const res = await fetch(
         `/api/admin/cards?username=${encodeURIComponent(username)}`,
-        { method: "DELETE" }
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${sessionToken || ""}`,
+            "x-admin-email": account?.email || "",
+          },
+        }
       );
       const data = await res.json();
       if (res.ok && data.success) {
@@ -202,6 +252,67 @@ export default function AdminDashboardPage() {
     );
     return { total, active, totalTaps, totalMom };
   }, [profiles]);
+
+  if (!hasHydrated) {
+    return (
+      <div className="py-24 text-center space-y-3 animate-in fade-in duration-200">
+        <RefreshCw className="w-8 h-8 animate-spin mx-auto text-sky-500" />
+        <p className="text-xs font-bold opacity-60">Memeriksa hak akses admin...</p>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="py-20 max-w-md mx-auto text-center space-y-5 animate-in fade-in duration-200">
+        <div className="w-16 h-16 rounded-3xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center mx-auto shadow-lg shadow-red-500/5">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-500 text-[10px] font-mono font-bold uppercase tracking-wider">
+            403 Forbidden
+          </div>
+          <h1
+            className={`text-2xl font-black tracking-tight ${
+              isDark ? "text-white" : "text-[#0A1633]"
+            }`}
+          >
+            Akses Ditolak
+          </h1>
+          <p
+            className={`text-xs leading-relaxed ${
+              isDark ? "text-white/60" : "text-slate-500"
+            }`}
+          >
+            Halaman konsol administrasi ini dilindungi dan hanya dapat diakses oleh administrator dan pemilik dengan email{" "}
+            <strong className="font-mono text-sky-500">cardinusantara@gmail.com</strong>.
+          </p>
+          {account?.email && (
+            <p className="text-[11px] opacity-50 font-mono">
+              Akun aktif: {account.email}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center justify-center gap-3 pt-2">
+          {!isAuthenticated ? (
+            <Link
+              href="/login"
+              className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition shadow-xs"
+            >
+              Masuk sebagai Admin
+            </Link>
+          ) : (
+            <Link
+              href="/dashboard/card"
+              className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition shadow-xs"
+            >
+              Kembali ke Dashboard Kartu
+            </Link>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">

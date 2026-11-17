@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listAllProfiles, updateCardProfile, deleteCardProfile } from "@/lib/server/db";
+import { verifyAdminRequest } from "@/lib/adminAuth";
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = verifyAdminRequest(request);
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, error: auth.error },
+        { status: auth.status }
+      );
+    }
+
     const profiles = listAllProfiles();
     return NextResponse.json({
       success: true,
@@ -20,6 +29,14 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const auth = verifyAdminRequest(request);
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, error: auth.error },
+        { status: auth.status }
+      );
+    }
+
     const body = await request.json();
     const { username, ...updates } = body;
 
@@ -53,6 +70,14 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const auth = verifyAdminRequest(request);
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, error: auth.error },
+        { status: auth.status }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     let username = searchParams.get("username");
 

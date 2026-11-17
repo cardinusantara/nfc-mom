@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { getTranslation } from "@/lib/i18n";
+import { isAdminEmail } from "@/lib/adminAuth";
 import { CardiMomLogo } from "@/components/CardiMomLogo";
 
 interface NavbarProps {
@@ -48,6 +49,13 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
 
   const t = getTranslation(locale);
   const isDark = theme === "dark";
+
+  const isAdmin = Boolean(
+    sessionToken &&
+    sessionToken.trim().length > 0 &&
+    account?.email &&
+    isAdminEmail(account.email)
+  );
 
   const hasActiveCard = Boolean(
     cardProfile?.isActivated ||
@@ -112,7 +120,7 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
             title="Saldo Koin MoM & NFC"
           >
             <Coins className="w-3.5 h-3.5" />
-            <span className="font-mono">{account.coinBalance ?? 0}</span>
+            <span className="font-mono">{account?.coinBalance ?? 0}</span>
           </Link>
 
           {/* Language Switcher */}
@@ -153,10 +161,10 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
                     : "bg-slate-50 border-slate-200 text-slate-900 hover:bg-slate-100"
                 }`}
               >
-                {account.avatarUrl || cardProfile.avatarUrl ? (
+                {account?.avatarUrl || cardProfile.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={account.avatarUrl || cardProfile.avatarUrl}
+                    src={account?.avatarUrl || cardProfile.avatarUrl}
                     alt={cardProfile.fullName || "User"}
                     className="w-6 h-6 rounded-full object-cover border border-slate-200"
                   />
@@ -195,14 +203,16 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
                       <Home className="w-3.5 h-3.5 opacity-50" />
                     </Link>
 
-                    <Link
-                      href="/dashboard/admin"
-                      onClick={() => setProfileDropdownOpen(false)}
-                      className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition text-xs font-medium text-sky-600 dark:text-sky-400"
-                    >
-                      <span>Admin: Kelola Kartu</span>
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                    </Link>
+                    {isAdmin && (
+                      <Link
+                        href="/dashboard/admin"
+                        onClick={() => setProfileDropdownOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition text-xs font-medium text-sky-600 dark:text-sky-400"
+                      >
+                        <span>Admin: Kelola Kartu</span>
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                      </Link>
+                    )}
 
                     <Link
                       href={`/${cardProfile.username || "user"}`}
@@ -301,20 +311,22 @@ export default function Navbar({ onOpenPairingModal }: NavbarProps) {
             <span>Beranda Web</span>
           </Link>
 
-          <Link
-            href="/dashboard/admin"
-            onClick={() => setMobileMenuOpen(false)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition ${
-              pathname === "/dashboard/admin"
-                ? "bg-sky-600 text-white"
-                : isDark
-                ? "text-slate-300 hover:bg-white/5"
-                : "text-slate-700 hover:bg-slate-100"
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4 text-sky-400" />
-            <span>Admin: Kelola Kartu</span>
-          </Link>
+          {isAdmin && (
+            <Link
+              href="/dashboard/admin"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition ${
+                pathname === "/dashboard/admin"
+                  ? "bg-sky-600 text-white"
+                  : isDark
+                  ? "text-slate-300 hover:bg-white/5"
+                  : "text-slate-700 hover:bg-slate-100"
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 text-sky-400" />
+              <span>Admin: Kelola Kartu</span>
+            </Link>
+          )}
 
           {navItems.map((item) => {
             const Icon = item.icon;

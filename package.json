@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:db": "node scripts/verify-nfc-db.mjs"
+    "test:db": "node scripts/verify-nfc-db.mjs",
+    "test:admin": "node scripts/verify-admin-protection.mjs",
+    "test": "node scripts/verify-nfc-db.mjs && node scripts/verify-admin-protection.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
