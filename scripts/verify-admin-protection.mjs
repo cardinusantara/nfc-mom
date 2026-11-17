@@ -50,7 +50,7 @@ async function run() {
   const adminRouteSrc = fs.readFileSync(path.join(PROJECT_ROOT, "src/app/api/admin/cards/route.ts"), "utf8");
   const adminAuthSrc = fs.readFileSync(path.join(PROJECT_ROOT, "src/lib/adminAuth.ts"), "utf8");
 
-  assert(adminAuthSrc.includes("cardinusantara@gmail.com"), "ADMIN_EMAIL is set to cardinusantara@gmail.com");
+  assert(adminAuthSrc.includes("cardinusantara@gmail.com") && adminAuthSrc.includes("dimasaldi428@gmail.com"), "ADMIN_EMAILS includes cardinusantara@gmail.com and dimasaldi428@gmail.com");
   assert(navbarSrc.includes("isAdmin"), "Navbar.tsx defines and uses isAdmin guard");
   assert(navbarSrc.includes("{isAdmin && ("), "Navbar.tsx wraps desktop and mobile admin navigation in isAdmin");
   assert(cardDashSrc.includes("{isAdmin && ("), "dashboard/card/page.tsx wraps admin link in isAdmin");
@@ -60,14 +60,21 @@ async function run() {
 
   // 1b. Unit tests for isAdminEmail helper
   console.log("\n--- TEST 1b: Unit Tests for isAdminEmail ---");
-  assert(isAdminEmail("cardinusantara@gmail.com") === true, "isAdminEmail matches exact email");
-  assert(isAdminEmail("CARDINUSANTARA@GMAIL.COM") === true, "isAdminEmail matches uppercase email");
+  assert(isAdminEmail("cardinusantara@gmail.com") === true, "isAdminEmail matches cardinusantara@gmail.com");
+  assert(isAdminEmail("dimasaldi428@gmail.com") === true, "isAdminEmail matches dimasaldi428@gmail.com");
+  assert(isAdminEmail("DIMASALDI428@GMAIL.COM") === true, "isAdminEmail matches uppercase dimasaldi428@gmail.com");
+  assert(isAdminEmail("  dimasaldi428@gmail.com  ") === true, "isAdminEmail handles whitespace for dimasaldi428@gmail.com");
+  assert(isAdminEmail("DimasAldi428@Gmail.Com") === true, "isAdminEmail matches mixed case dimasaldi428@gmail.com");
+  assert(isAdminEmail("CARDINUSANTARA@GMAIL.COM") === true, "isAdminEmail matches uppercase cardinusantara@gmail.com");
   assert(isAdminEmail("  cardinusantara@gmail.com  ") === true, "isAdminEmail handles surrounding whitespace");
   assert(isAdminEmail("CardiNusantara@Gmail.Com") === true, "isAdminEmail matches mixed case email");
   assert(isAdminEmail("other@gmail.com") === false, "isAdminEmail rejects other valid emails");
   assert(isAdminEmail("cardinusantara@gmail.com.attacker.com") === false, "isAdminEmail rejects domain spoof suffix");
+  assert(isAdminEmail("dimasaldi428@gmail.com.attacker.com") === false, "isAdminEmail rejects domain spoof suffix for dimasaldi428");
   assert(isAdminEmail("cardinusantara+attacker@gmail.com") === false, "isAdminEmail rejects subaddressed plus aliases");
+  assert(isAdminEmail("dimasaldi428+attacker@gmail.com") === false, "isAdminEmail rejects subaddressed plus aliases for dimasaldi428");
   assert(isAdminEmail("\t cardinusantara@gmail.com\r\n ") === true, "isAdminEmail handles surrounding tabs and newlines");
+  assert(isAdminEmail("\t dimasaldi428@gmail.com\r\n ") === true, "isAdminEmail handles surrounding tabs and newlines for dimasaldi428");
   assert(isAdminEmail("") === false, "isAdminEmail rejects empty string");
   assert(isAdminEmail("   ") === false, "isAdminEmail rejects whitespace-only string");
   assert(isAdminEmail(null) === false, "isAdminEmail rejects null");
@@ -198,6 +205,16 @@ async function run() {
   }));
   assert(unitAdmin.authorized === true && unitAdmin.status === 200, "verifyAdminRequest returns 200 for valid admin request");
 
+  const unitDimasAdmin = verifyAdminRequest(new Request("http://localhost/api/admin/cards", {
+    headers: { authorization: "Bearer mock_valid_session_token", "x-admin-email": "dimasaldi428@gmail.com" },
+  }));
+  assert(unitDimasAdmin.authorized === true && unitDimasAdmin.status === 200, "verifyAdminRequest returns 200 for valid dimasaldi428 admin request");
+
+  const unitDimasJwt = verifyAdminRequest(new Request("http://localhost/api/admin/cards", {
+    headers: { authorization: `Bearer ${createUnitTestJwt({ email: "dimasaldi428@gmail.com", exp: nowSecUnit + 3600 })}` },
+  }));
+  assert(unitDimasJwt.authorized === true && unitDimasJwt.status === 200, "verifyAdminRequest returns 200 for valid dimasaldi428 JWT");
+
   // 1d. Client State & Session Hydration Matrix Simulation
   console.log("\n--- TEST 1d: Client Session Hydration Matrix Simulation ---");
   const simulateClientGuards = ({ hasHydrated, sessionToken, accountEmail }) => {
@@ -264,6 +281,15 @@ async function run() {
   assert(adminOwnerSession.isAuthenticated === true, "Admin owner is authenticated");
   assert(adminOwnerSession.isAdmin === true, "Admin owner is granted access to admin dashboard");
   assert(adminOwnerSession.navIsAdmin === true, "Admin owner sees admin navigation buttons");
+
+  const dimasAdminSession = simulateClientGuards({
+    hasHydrated: true,
+    sessionToken: "valid_session_token_789",
+    accountEmail: "dimasaldi428@gmail.com",
+  });
+  assert(dimasAdminSession.isAuthenticated === true, "Dimas admin is authenticated");
+  assert(dimasAdminSession.isAdmin === true, "Dimas admin is granted access to admin dashboard");
+  assert(dimasAdminSession.navIsAdmin === true, "Dimas admin sees admin navigation buttons");
 
   // 2. HTTP Route Testing on live Next.js server
   console.log("\n--- STARTING NEXT.JS SERVER FOR ADMIN HTTP TESTS ---");
@@ -342,6 +368,24 @@ async function run() {
       },
     });
     assert(adminUpperGetRes.status === 200, `GET with uppercase admin email returns 200 OK (got ${adminUpperGetRes.status})`);
+
+    // Test 4c: Authorized Admin dimasaldi428@gmail.com
+    console.log("\n--- TEST 4c: Authorized Admin dimasaldi428@gmail.com GET /api/admin/cards ---");
+    const dimasGetRes = await fetch(`http://localhost:${testPort}/api/admin/cards`, {
+      headers: {
+        Authorization: "Bearer mock_valid_session_token_xyz",
+        "x-admin-email": "dimasaldi428@gmail.com",
+      },
+    });
+    assert(dimasGetRes.status === 200, `GET with dimas admin email returns 200 OK (got ${dimasGetRes.status})`);
+
+    const dimasUpperGetRes = await fetch(`http://localhost:${testPort}/api/admin/cards`, {
+      headers: {
+        Authorization: "Bearer mock_valid_session_token_xyz",
+        "x-admin-email": "DIMASALDI428@GMAIL.COM",
+      },
+    });
+    assert(dimasUpperGetRes.status === 200, `GET with uppercase dimas admin email returns 200 OK (got ${dimasUpperGetRes.status})`);
 
     // Test 5: PATCH /api/admin/cards without auth -> 401
     console.log("\n--- TEST 5: Unauthenticated PATCH /api/admin/cards ---");
@@ -425,6 +469,13 @@ async function run() {
       headers: { Authorization: `Bearer ${adminJwt}` },
     });
     assert(adminJwtRes.status === 200, `GET with valid admin JWT returns 200 OK (got ${adminJwtRes.status})`);
+
+    // Valid dimas admin JWT
+    const dimasJwt = createJwt({ email: "dimasaldi428@gmail.com", exp: nowSec + 3600 });
+    const dimasJwtRes = await fetch(`http://localhost:${testPort}/api/admin/cards`, {
+      headers: { Authorization: `Bearer ${dimasJwt}` },
+    });
+    assert(dimasJwtRes.status === 200, `GET with valid dimas admin JWT returns 200 OK (got ${dimasJwtRes.status})`);
 
     // Valid regular user JWT -> 403
     const userJwt = createJwt({ email: "user@example.com", exp: nowSec + 3600 });

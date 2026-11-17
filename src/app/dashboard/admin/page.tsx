@@ -284,8 +284,7 @@ export default function AdminDashboardPage() {
               isDark ? "text-white/60" : "text-slate-500"
             }`}
           >
-            Halaman konsol administrasi ini dilindungi dan hanya dapat diakses oleh administrator dan pemilik dengan email{" "}
-            <strong className="font-mono text-sky-500">cardinusantara@gmail.com</strong>.
+            Halaman konsol administrasi ini dilindungi dan hanya dapat diakses oleh administrator terdaftar (<strong className="font-mono text-sky-500">cardinusantara@gmail.com</strong> dan <strong className="font-mono text-sky-500">dimasaldi428@gmail.com</strong>).
           </p>
           {account?.email && (
             <p className="text-[11px] opacity-50 font-mono">

@@ -1,8 +1,14 @@
-export const ADMIN_EMAIL = "cardinusantara@gmail.com";
+export const ADMIN_EMAILS = [
+  "cardinusantara@gmail.com",
+  "dimasaldi428@gmail.com",
+] as const;
+
+export const ADMIN_EMAIL = ADMIN_EMAILS[0];
 
 export function isAdminEmail(email?: string | null): boolean {
   if (!email || typeof email !== "string") return false;
-  return email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const normalized = email.trim().toLowerCase();
+  return ADMIN_EMAILS.some((admin) => admin.toLowerCase() === normalized);
 }
 
 export interface AdminAuthResult {
@@ -157,7 +163,7 @@ export function verifyAdminRequest(req: Request): AdminAuthResult {
     return {
       authorized: false,
       status: 403,
-      error: "Akses ditolak: Hanya admin dan owner cardinusantara@gmail.com yang berwenang.",
+      error: "Akses ditolak: Hanya akun admin terdaftar yang berwenang.",
     };
   }
 
