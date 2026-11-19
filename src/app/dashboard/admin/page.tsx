@@ -132,8 +132,7 @@ export default function AdminDashboardPage() {
           )
         );
         showToast(
-          `Status kartu @${profile.username} diubah ke ${
-            nextStatus ? "Aktif" : "Nonaktif"
+          `Status kartu @${profile.username} diubah ke ${nextStatus ? "Aktif" : "Nonaktif"
           }`
         );
       } else {
@@ -273,16 +272,14 @@ export default function AdminDashboardPage() {
             403 Forbidden
           </div>
           <h1
-            className={`text-2xl font-black tracking-tight ${
-              isDark ? "text-white" : "text-[#0A1633]"
-            }`}
+            className={`text-2xl font-black tracking-tight ${isDark ? "text-white" : "text-[#0A1633]"
+              }`}
           >
             Akses Ditolak
           </h1>
           <p
-            className={`text-xs leading-relaxed ${
-              isDark ? "text-white/60" : "text-slate-500"
-            }`}
+            className={`text-xs leading-relaxed ${isDark ? "text-white/60" : "text-slate-500"
+              }`}
           >
             Halaman konsol administrasi ini dilindungi dan hanya dapat diakses oleh administrator terdaftar (<strong className="font-mono text-sky-500">cardinusantara@gmail.com</strong> dan <strong className="font-mono text-sky-500">dimasaldi428@gmail.com</strong>).
           </p>
@@ -325,9 +322,8 @@ export default function AdminDashboardPage() {
 
       {/* Header Bar */}
       <div
-        className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b transition-colors ${
-          isDark ? "border-white/10" : "border-slate-200"
-        }`}
+        className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b transition-colors ${isDark ? "border-white/10" : "border-slate-200"
+          }`}
       >
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -338,16 +334,14 @@ export default function AdminDashboardPage() {
             <span className="text-xs opacity-60">Admin Console</span>
           </div>
           <h1
-            className={`text-2xl font-black tracking-tight ${
-              isDark ? "text-white" : "text-[#0A1633]"
-            }`}
+            className={`text-2xl font-black tracking-tight ${isDark ? "text-white" : "text-[#0A1633]"
+              }`}
           >
             Kelola Kartu & Profil Pengguna
           </h1>
           <p
-            className={`text-xs mt-1 max-w-xl ${
-              isDark ? "text-white/60" : "text-slate-500"
-            }`}
+            className={`text-xs mt-1 max-w-xl ${isDark ? "text-white/60" : "text-slate-500"
+              }`}
           >
             Pantau semua kartu NFC yang terdaftar, status aktivasi, kepemilikan tag fisik, dan metrik interaksi.
           </p>
@@ -357,11 +351,10 @@ export default function AdminDashboardPage() {
           <button
             onClick={fetchCards}
             disabled={loading}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition ${
-              isDark
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition ${isDark
                 ? "bg-white/5 hover:bg-white/10 border-white/15 text-white"
                 : "bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-xs"
-            }`}
+              }`}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
             <span>Segarkan Data</span>
@@ -371,13 +364,12 @@ export default function AdminDashboardPage() {
             type="button"
             onClick={exportCardsToCsv}
             disabled={profiles.length === 0}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition ${
-              profiles.length === 0
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition ${profiles.length === 0
                 ? "opacity-40 cursor-not-allowed border-slate-300 dark:border-white/10"
                 : isDark
-                ? "bg-white/5 hover:bg-white/10 border-white/15 text-white"
-                : "bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-xs"
-            }`}
+                  ? "bg-white/5 hover:bg-white/10 border-white/15 text-white"
+                  : "bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-xs"
+              }`}
             title="Ekspor seluruh data kartu ke file CSV"
           >
             <Download className="w-3.5 h-3.5" />
@@ -397,11 +389,10 @@ export default function AdminDashboardPage() {
       {/* Metrics Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div
-          className={`p-4 rounded-2xl border transition ${
-            isDark
+          className={`p-4 rounded-2xl border transition ${isDark
               ? "bg-[#0E1A33] border-white/10 shadow-lg"
               : "bg-white border-slate-200 shadow-xs"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold uppercase tracking-wider opacity-60">
@@ -418,11 +409,10 @@ export default function AdminDashboardPage() {
         </div>
 
         <div
-          className={`p-4 rounded-2xl border transition ${
-            isDark
+          className={`p-4 rounded-2xl border transition ${isDark
               ? "bg-[#0E1A33] border-white/10 shadow-lg"
               : "bg-white border-slate-200 shadow-xs"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold uppercase tracking-wider opacity-60">
@@ -439,11 +429,10 @@ export default function AdminDashboardPage() {
         </div>
 
         <div
-          className={`p-4 rounded-2xl border transition ${
-            isDark
+          className={`p-4 rounded-2xl border transition ${isDark
               ? "bg-[#0E1A33] border-white/10 shadow-lg"
               : "bg-white border-slate-200 shadow-xs"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold uppercase tracking-wider opacity-60">
@@ -463,11 +452,10 @@ export default function AdminDashboardPage() {
         </div>
 
         <div
-          className={`p-4 rounded-2xl border transition ${
-            isDark
+          className={`p-4 rounded-2xl border transition ${isDark
               ? "bg-[#0E1A33] border-white/10 shadow-lg"
               : "bg-white border-slate-200 shadow-xs"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold uppercase tracking-wider opacity-60">
@@ -486,11 +474,10 @@ export default function AdminDashboardPage() {
 
       {/* Filter and Search Bar */}
       <div
-        className={`p-4 rounded-2xl border flex flex-col md:flex-row items-center justify-between gap-4 transition ${
-          isDark
+        className={`p-4 rounded-2xl border flex flex-col md:flex-row items-center justify-between gap-4 transition ${isDark
             ? "bg-[#0E1A33] border-white/10 shadow-lg"
             : "bg-white border-slate-200 shadow-xs"
-        }`}
+          }`}
       >
         <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40" />
@@ -499,11 +486,10 @@ export default function AdminDashboardPage() {
             placeholder="Cari username, nama, email, tag ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full pl-10 pr-4 py-2 rounded-xl text-xs border outline-none transition ${
-              isDark
+            className={`w-full pl-10 pr-4 py-2 rounded-xl text-xs border outline-none transition ${isDark
                 ? "bg-white/5 border-white/10 text-white placeholder-white/40 focus:border-sky-500"
                 : "bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400 focus:border-sky-500"
-            }`}
+              }`}
           />
           {searchQuery && (
             <button
@@ -521,37 +507,34 @@ export default function AdminDashboardPage() {
           </span>
           <button
             onClick={() => setStatusFilter("all")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-              statusFilter === "all"
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${statusFilter === "all"
                 ? "bg-sky-600 text-white shadow-xs"
                 : isDark
-                ? "bg-white/5 text-slate-300 hover:bg-white/10"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            }`}
+                  ? "bg-white/5 text-slate-300 hover:bg-white/10"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
           >
             Semua ({profiles.length})
           </button>
           <button
             onClick={() => setStatusFilter("active")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-              statusFilter === "active"
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${statusFilter === "active"
                 ? "bg-emerald-600 text-white shadow-xs"
                 : isDark
-                ? "bg-white/5 text-slate-300 hover:bg-white/10"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            }`}
+                  ? "bg-white/5 text-slate-300 hover:bg-white/10"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
           >
             Aktif ({profiles.filter((p) => p.isActivated).length})
           </button>
           <button
             onClick={() => setStatusFilter("inactive")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-              statusFilter === "inactive"
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${statusFilter === "inactive"
                 ? "bg-red-600 text-white shadow-xs"
                 : isDark
-                ? "bg-white/5 text-slate-300 hover:bg-white/10"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            }`}
+                  ? "bg-white/5 text-slate-300 hover:bg-white/10"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
           >
             Nonaktif ({profiles.filter((p) => !p.isActivated).length})
           </button>
@@ -560,11 +543,10 @@ export default function AdminDashboardPage() {
 
       {/* Main Table / List View */}
       <div
-        className={`rounded-2xl border overflow-hidden transition ${
-          isDark
+        className={`rounded-2xl border overflow-hidden transition ${isDark
             ? "bg-[#0E1A33] border-white/10 shadow-xl"
             : "bg-white border-slate-200 shadow-xs"
-        }`}
+          }`}
       >
         {loading ? (
           <div className="py-16 text-center">
@@ -593,11 +575,10 @@ export default function AdminDashboardPage() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr
-                  className={`border-b font-mono uppercase tracking-wider text-[11px] ${
-                    isDark
+                  className={`border-b font-mono uppercase tracking-wider text-[11px] ${isDark
                       ? "border-white/10 bg-white/5 text-white/60"
                       : "border-slate-200 bg-slate-50 text-slate-500"
-                  }`}
+                    }`}
                 >
                   <th className="py-3.5 px-4 font-semibold">Pengguna & Profil</th>
                   <th className="py-3.5 px-4 font-semibold">Chip NFC / Tag ID</th>
@@ -614,9 +595,8 @@ export default function AdminDashboardPage() {
                   return (
                     <tr
                       key={p.username}
-                      className={`transition ${
-                        isDark ? "hover:bg-white/[0.02]" : "hover:bg-slate-50/70"
-                      }`}
+                      className={`transition ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-slate-50/70"
+                        }`}
                     >
                       {/* 1. Pengguna & Profil */}
                       <td className="py-4 px-4 align-middle">
@@ -700,11 +680,10 @@ export default function AdminDashboardPage() {
                           onClick={() => handleToggleActive(p)}
                           disabled={isActionLoading}
                           title={p.isActivated ? "Klik untuk Nonaktifkan" : "Klik untuk Aktifkan"}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition border ${
-                            p.isActivated
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition border ${p.isActivated
                               ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/25"
                               : "bg-red-500/15 border-red-500/30 text-red-500 hover:bg-red-500/25"
-                          }`}
+                            }`}
                         >
                           {p.isActivated ? (
                             <>
@@ -745,11 +724,10 @@ export default function AdminDashboardPage() {
                           <Link
                             href={`/${p.username}`}
                             target="_blank"
-                            className={`p-2 rounded-xl border transition ${
-                              isDark
+                            className={`p-2 rounded-xl border transition ${isDark
                                 ? "bg-white/5 hover:bg-white/10 border-white/10 text-white"
                                 : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
-                            }`}
+                              }`}
                             title="Buka Halaman Tap Publik"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
@@ -778,11 +756,10 @@ export default function AdminDashboardPage() {
       {deleteConfirmUser && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div
-            className={`w-full max-w-sm rounded-2xl p-6 border shadow-2xl space-y-4 animate-in zoom-in-95 duration-100 ${
-              isDark
+            className={`w-full max-w-sm rounded-2xl p-6 border shadow-2xl space-y-4 animate-in zoom-in-95 duration-100 ${isDark
                 ? "bg-[#0E1A33] border-white/15 text-white"
                 : "bg-white border-slate-200 text-slate-900"
-            }`}
+              }`}
           >
             <div className="flex items-center gap-3 text-red-500">
               <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center">
@@ -802,11 +779,10 @@ export default function AdminDashboardPage() {
               <button
                 type="button"
                 onClick={() => setDeleteConfirmUser(null)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition ${
-                  isDark
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition ${isDark
                     ? "bg-white/5 hover:bg-white/10 border-white/10 text-white"
                     : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700"
-                }`}
+                  }`}
               >
                 Batal
               </button>

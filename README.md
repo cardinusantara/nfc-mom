@@ -1,4 +1,4 @@
-# Cardi NFC MoM  -  Standalone NFC Digital Portal (`nfc.cardi.co.id`)
+# Cardi NFC MoM - Standalone NFC Digital Portal (`nfc.cardi.co.id`)
 
 Canonical digital identity and NFC smart card portal for the Cardi MoM ecosystem.
 

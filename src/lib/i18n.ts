@@ -268,4 +268,3 @@ export const DICTIONARY = {
 export function getTranslation(locale: AppLocale = "id") {
   return DICTIONARY[locale] || DICTIONARY.id;
 }
-

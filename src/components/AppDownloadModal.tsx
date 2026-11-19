@@ -29,7 +29,11 @@ export default function AppDownloadModal({
   title,
 }: AppDownloadModalProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [deviceInfo] = useState(() => getDeviceInfo());
+  const [deviceInfo, setDeviceInfo] = useState(() => getDeviceInfo());
+
+  useEffect(() => {
+    setDeviceInfo(getDeviceInfo());
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -145,7 +149,6 @@ export default function AppDownloadModal({
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               {qrDataUrl ? (
                 <div className="bg-white p-2 rounded-xl shadow-md shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={qrDataUrl}
                     alt="QR Code Unduh Cardi MoM"

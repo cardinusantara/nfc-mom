@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef } from "react";
 import {
   Mic,
   FileText,
@@ -22,24 +22,14 @@ import {
   Volume2,
   CalendarPlus,
   ExternalLink,
-  RefreshCw,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
-import { cardiApi } from "@/lib/api";
 import { Meeting } from "@/lib/types";
 import AudioRecordModal from "@/components/AudioRecordModal";
 import { CardiMomLogo } from "@/components/CardiMomLogo";
 
 export default function DashboardMomPage() {
-  const {
-    meetings,
-    setMeetings,
-    sessionToken,
-    updateCoinBalance,
-    theme,
-    locale,
-    syncMomToCalendar,
-  } = useAppStore();
+  const { meetings, theme, locale, syncMomToCalendar } = useAppStore();
   const isDark = theme === "dark";
 
   const [selectedMeetingId, setSelectedMeetingId] = useState<string>(
@@ -50,41 +40,6 @@ export default function DashboardMomPage() {
   const [copiedShare, setCopiedShare] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [calendarSyncSuccess, setCalendarSyncSuccess] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatusText, setSyncStatusText] = useState<string | null>(null);
-
-  const fetchLiveMeetings = useCallback(async () => {
-    if (!sessionToken) return;
-    setIsSyncing(true);
-    setSyncStatusText(null);
-    try {
-      cardiApi.setToken(sessionToken);
-      const res = await cardiApi.syncMeetings();
-      if (res.entries) {
-        const liveMeetings = res.entries
-          .filter((e) => !e.deleted && e.meeting)
-          .map((e) => (e as { deleted: false; meeting: Meeting }).meeting);
-        setMeetings(liveMeetings);
-        if (liveMeetings.length > 0 && !selectedMeetingId) {
-          setSelectedMeetingId(liveMeetings[0].id);
-        }
-      }
-      if (res.account?.coinsBalance !== undefined) {
-        updateCoinBalance(res.account.coinsBalance);
-      }
-      setSyncStatusText("Data notulen berhasil disinkronkan dengan server.");
-      setTimeout(() => setSyncStatusText(null), 3000);
-    } catch {
-      setSyncStatusText("Sinkronisasi offline atau server sedang sibuk.");
-      setTimeout(() => setSyncStatusText(null), 3000);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [selectedMeetingId, sessionToken, setMeetings, updateCoinBalance]);
-
-  useEffect(() => {
-    void fetchLiveMeetings();
-  }, [fetchLiveMeetings]);
 
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
@@ -113,8 +68,7 @@ export default function DashboardMomPage() {
       `*ACTION ITEMS (TINDAK LANJUT):*`,
       ...m.mom.actionItems.map(
         (ai, i) =>
-          `[ ] ${ai.item} (PIC: ${ai.owner || "-"}, Deadline: ${
-            ai.dueDateText || ai.dueDate || "-"
+          `[ ] ${ai.item} (PIC: ${ai.owner || "-"}, Deadline: ${ai.dueDateText || ai.dueDate || "-"
           })`
       ),
       ``,
@@ -161,62 +115,36 @@ export default function DashboardMomPage() {
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header Bar */}
       <div
-        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b ${
-          isDark ? "border-white/10" : "border-slate-200"
-        }`}
+        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b ${isDark ? "border-white/10" : "border-slate-200"
+          }`}
       >
         <div>
           <div className="flex items-center gap-2 mb-1">
             <CardiMomLogo size="sm" colorMode={isDark ? "dark" : "light"} />
             <span
-              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                isDark
+              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isDark
                   ? "bg-sky-500/15 text-sky-400 border border-sky-500/30"
                   : "bg-sky-50 text-sky-700 border border-sky-200"
-              }`}
+                }`}
             >
               Notula Rapat &amp; AI Intelligence
             </span>
           </div>
           <p
-            className={`text-xs ${
-              isDark ? "text-slate-400" : "text-slate-500"
-            }`}
+            className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"
+              }`}
           >
             Rekam pembicaraan rapat langsung dari mikrofon atau tap kartu NFC, transkripsi otomatis, dan ringkasan eksekutif AI.
           </p>
-          {syncStatusText && (
-            <p className="text-[11px] text-sky-600 dark:text-sky-400 mt-1 font-medium">
-              {syncStatusText}
-            </p>
-          )}
         </div>
 
-        <div className="flex items-center gap-2">
-          {sessionToken && (
-            <button
-              onClick={() => void fetchLiveMeetings()}
-              disabled={isSyncing}
-              className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border transition cursor-pointer disabled:opacity-50 ${
-                isDark
-                  ? "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
-                  : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
-              }`}
-              title="Tarik data notulen terbaru dari aplikasi ponsel Cardi MoM"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-sky-500" : "text-sky-600"}`} />
-              <span>{isSyncing ? "Menyinkronkan..." : "Sinkronkan Mobile"}</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => setIsRecordModalOpen(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-700 hover:to-rose-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-red-500/25 transition active:scale-[0.98] cursor-pointer"
-          >
-            <Mic className="w-4 h-4 animate-pulse" />
-            <span>Rekam Notula Rapat Baru</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setIsRecordModalOpen(true)}
+          className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-700 hover:to-rose-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-red-500/25 transition active:scale-[0.98] cursor-pointer"
+        >
+          <Mic className="w-4 h-4 animate-pulse" />
+          <span>Rekam Notula Rapat Baru</span>
+        </button>
       </div>
 
       {/* 2-Column Split: Meeting List (Left) and Meeting Detail (Right) */}
@@ -226,20 +154,18 @@ export default function DashboardMomPage() {
           {/* Search bar */}
           <div className="relative">
             <Search
-              className={`w-4 h-4 absolute left-3 top-2.5 ${
-                isDark ? "text-slate-500" : "text-slate-400"
-              }`}
+              className={`w-4 h-4 absolute left-3 top-2.5 ${isDark ? "text-slate-500" : "text-slate-400"
+                }`}
             />
             <input
               type="text"
               placeholder="Cari judul atau nama peserta..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full border rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-sky-500 transition ${
-                isDark
+              className={`w-full border rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-sky-500 transition ${isDark
                   ? "bg-[#0E1A30] border-white/10 text-white placeholder-slate-500"
                   : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"
-              }`}
+                }`}
             />
           </div>
 
@@ -247,17 +173,15 @@ export default function DashboardMomPage() {
           <div className="space-y-2 max-h-[700px] overflow-y-auto pr-1">
             {filteredMeetings.length === 0 ? (
               <div
-                className={`text-center py-12 rounded-2xl border p-4 ${
-                  isDark
+                className={`text-center py-12 rounded-2xl border p-4 ${isDark
                     ? "bg-[#0E1A30]/60 border-white/10"
                     : "bg-white border-slate-200 shadow-xs"
-                }`}
+                  }`}
               >
                 <FileText className="w-8 h-8 text-slate-500 mx-auto mb-2 opacity-50" />
                 <p
-                  className={`text-xs ${
-                    isDark ? "text-slate-400" : "text-slate-500"
-                  }`}
+                  className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
                 >
                   Belum ada notula rapat yang tersimpan.
                 </p>
@@ -276,23 +200,21 @@ export default function DashboardMomPage() {
                   <div
                     key={mtg.id}
                     onClick={() => setSelectedMeetingId(mtg.id)}
-                    className={`p-3.5 rounded-xl border cursor-pointer transition text-left ${
-                      isSelected
+                    className={`p-3.5 rounded-xl border cursor-pointer transition text-left ${isSelected
                         ? "bg-sky-500/10 border-sky-500 shadow-sm"
                         : isDark
-                        ? "bg-[#0E1A30]/80 border-white/10 hover:border-white/20 hover:bg-[#12213D]"
-                        : "bg-white border-slate-200 hover:border-sky-200 hover:bg-slate-50 shadow-xs"
-                    }`}
+                          ? "bg-[#0E1A30]/80 border-white/10 hover:border-white/20 hover:bg-[#12213D]"
+                          : "bg-white border-slate-200 hover:border-sky-200 hover:bg-slate-50 shadow-xs"
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <h4
-                        className={`text-xs font-bold line-clamp-1 ${
-                          isSelected
+                        className={`text-xs font-bold line-clamp-1 ${isSelected
                             ? "text-sky-400"
                             : isDark
-                            ? "text-white"
-                            : "text-slate-900"
-                        }`}
+                              ? "text-white"
+                              : "text-slate-900"
+                          }`}
                       >
                         {mtg.title}
                       </h4>
@@ -302,19 +224,17 @@ export default function DashboardMomPage() {
                     </div>
 
                     <p
-                      className={`text-[11px] line-clamp-2 mb-2 italic ${
-                        isDark ? "text-slate-400" : "text-slate-500"
-                      }`}
+                      className={`text-[11px] line-clamp-2 mb-2 italic ${isDark ? "text-slate-400" : "text-slate-500"
+                        }`}
                     >
                       {mtg.mom?.shortSummary || "Ringkasan notula AI..."}
                     </p>
 
                     <div
-                      className={`flex items-center justify-between text-[10px] border-t pt-2 ${
-                        isDark
+                      className={`flex items-center justify-between text-[10px] border-t pt-2 ${isDark
                           ? "border-white/5 text-slate-500"
                           : "border-slate-100 text-slate-400"
-                      }`}
+                        }`}
                     >
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
@@ -334,19 +254,17 @@ export default function DashboardMomPage() {
 
         {/* Right: Selected Meeting Detail (8 Cols) */}
         <div
-          className={`lg:col-span-8 border rounded-2xl p-6 shadow-xl flex flex-col min-h-[600px] transition-colors ${
-            isDark
+          className={`lg:col-span-8 border rounded-2xl p-6 shadow-xl flex flex-col min-h-[600px] transition-colors ${isDark
               ? "bg-[#0E1A30] border-white/10"
               : "bg-white border-slate-200 shadow-slate-100"
-          }`}
+            }`}
         >
           {selectedMeeting ? (
             <div className="space-y-6">
               {/* Meeting Header */}
               <div
-                className={`flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b ${
-                  isDark ? "border-white/10" : "border-slate-100"
-                }`}
+                className={`flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b ${isDark ? "border-white/10" : "border-slate-100"
+                  }`}
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1.5">
@@ -401,11 +319,10 @@ export default function DashboardMomPage() {
 
                   <button
                     onClick={handleCopyMinutes}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
-                      isDark
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${isDark
                         ? "bg-white/5 hover:bg-white/10 border-white/10 text-white"
                         : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800"
-                    }`}
+                      }`}
                   >
                     {copiedShare ? (
                       <Check className="w-3.5 h-3.5 text-emerald-500" />
@@ -427,11 +344,10 @@ export default function DashboardMomPage() {
               {/* Audio Player if recorded */}
               {selectedMeeting.audioUrl && (
                 <div
-                  className={`p-3.5 rounded-2xl border flex items-center justify-between gap-4 ${
-                    isDark
+                  className={`p-3.5 rounded-2xl border flex items-center justify-between gap-4 ${isDark
                       ? "bg-[#070F1E] border-white/10"
                       : "bg-slate-50 border-slate-200"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <button
@@ -468,20 +384,18 @@ export default function DashboardMomPage() {
 
               {/* 1. Ringkasan Eksekutif */}
               <div
-                className={`p-4 rounded-xl border ${
-                  isDark
+                className={`p-4 rounded-xl border ${isDark
                     ? "bg-white/5 border-white/10"
                     : "bg-sky-50/50 border-sky-100"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-2 mb-2 text-xs font-bold text-sky-500 uppercase tracking-wider">
                   <Sparkles className="w-4 h-4" />
                   <span>Ringkasan Eksekutif AI</span>
                 </div>
                 <p
-                  className={`text-xs leading-relaxed font-normal ${
-                    isDark ? "text-slate-200" : "text-slate-700"
-                  }`}
+                  className={`text-xs leading-relaxed font-normal ${isDark ? "text-slate-200" : "text-slate-700"
+                    }`}
                 >
                   {selectedMeeting.mom?.executiveSummary}
                 </p>
@@ -496,19 +410,17 @@ export default function DashboardMomPage() {
                   {selectedMeeting.mom?.discussionPoints.map((pt, idx) => (
                     <div
                       key={idx}
-                      className={`p-3.5 rounded-xl border text-xs ${
-                        isDark
+                      className={`p-3.5 rounded-xl border text-xs ${isDark
                           ? "bg-white/5 border-white/5"
                           : "bg-slate-50 border-slate-100"
-                      }`}
+                        }`}
                     >
                       <h4 className="font-bold text-slate-900 dark:text-white mb-1">
                         {pt.topic}
                       </h4>
                       <p
-                        className={`leading-relaxed ${
-                          isDark ? "text-slate-300" : "text-slate-600"
-                        }`}
+                        className={`leading-relaxed ${isDark ? "text-slate-300" : "text-slate-600"
+                          }`}
                       >
                         {pt.detail}
                       </p>
@@ -551,18 +463,16 @@ export default function DashboardMomPage() {
                 </div>
 
                 <div
-                  className={`border rounded-xl overflow-hidden ${
-                    isDark ? "border-white/10" : "border-slate-200"
-                  }`}
+                  className={`border rounded-xl overflow-hidden ${isDark ? "border-white/10" : "border-slate-200"
+                    }`}
                 >
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr
-                        className={`border-b uppercase text-[10px] font-bold ${
-                          isDark
+                        className={`border-b uppercase text-[10px] font-bold ${isDark
                             ? "bg-white/5 border-white/10 text-slate-400"
                             : "bg-slate-50 border-slate-200 text-slate-500"
-                        }`}
+                          }`}
                       >
                         <th className="p-3">Tugas / Item Tindak Lanjut</th>
                         <th className="p-3">PIC (Penanggung Jawab)</th>
@@ -570,25 +480,22 @@ export default function DashboardMomPage() {
                       </tr>
                     </thead>
                     <tbody
-                      className={`divide-y ${
-                        isDark ? "divide-white/5" : "divide-slate-100"
-                      }`}
+                      className={`divide-y ${isDark ? "divide-white/5" : "divide-slate-100"
+                        }`}
                     >
                       {selectedMeeting.mom?.actionItems.map((item, idx) => (
                         <tr
                           key={idx}
-                          className={`transition ${
-                            isDark ? "hover:bg-white/5" : "hover:bg-slate-50"
-                          }`}
+                          className={`transition ${isDark ? "hover:bg-white/5" : "hover:bg-slate-50"
+                            }`}
                         >
                           <td className="p-3 font-medium text-slate-900 dark:text-white">
                             {item.item}
                           </td>
                           <td className="p-3 text-slate-600 dark:text-slate-300">
                             <span
-                              className={`px-2 py-0.5 rounded text-[11px] font-medium ${
-                                isDark ? "bg-white/10" : "bg-slate-100"
-                              }`}
+                              className={`px-2 py-0.5 rounded text-[11px] font-medium ${isDark ? "bg-white/10" : "bg-slate-100"
+                                }`}
                             >
                               {item.owner || "Belum ditentukan"}
                             </span>

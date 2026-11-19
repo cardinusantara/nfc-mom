@@ -128,11 +128,10 @@ export default function DashboardCalendarPage() {
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Top Banner: Google Calendar Sync Status */}
       <div
-        className={`p-5 rounded-2xl border transition-colors ${
-          isDark
+        className={`p-5 rounded-2xl border transition-colors ${isDark
             ? "bg-gradient-to-r from-sky-950/40 via-slate-900 to-slate-900 border-sky-500/20"
             : "bg-gradient-to-r from-sky-50 via-white to-white border-sky-200 shadow-xs"
-        }`}
+          }`}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
@@ -152,9 +151,8 @@ export default function DashboardCalendarPage() {
                 </span>
               </div>
               <p
-                className={`text-xs mt-0.5 ${
-                  isDark ? "text-slate-400" : "text-slate-500"
-                }`}
+                className={`text-xs mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"
+                  }`}
               >
                 {account.email
                   ? `Akun tersinkron: ${account.email}`
@@ -166,11 +164,10 @@ export default function DashboardCalendarPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleSyncMoM}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition ${
-                isDark
+              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition ${isDark
                   ? "bg-white/5 border-white/10 hover:bg-white/10 text-white"
                   : "bg-white border-slate-200 hover:bg-slate-50 text-slate-800 shadow-xs"
-              }`}
+                }`}
               title="Ekstrak Action Items dari seluruh notula rapat MoM menjadi jadwal kalender"
             >
               <Sparkles className="w-3.5 h-3.5 text-sky-400" />
@@ -179,11 +176,10 @@ export default function DashboardCalendarPage() {
 
             <button
               onClick={handleExportIcs}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition ${
-                isDark
+              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition ${isDark
                   ? "bg-white/5 border-white/10 hover:bg-white/10 text-white"
                   : "bg-white border-slate-200 hover:bg-slate-50 text-slate-800 shadow-xs"
-              }`}
+                }`}
               title="Unduh format .ics untuk Apple Calendar & Outlook"
             >
               <Download className="w-3.5 h-3.5 text-slate-400" />
@@ -214,43 +210,39 @@ export default function DashboardCalendarPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Filter Pills */}
         <div
-          className={`flex items-center gap-1 p-1 rounded-xl border w-fit ${
-            isDark ? "bg-white/5 border-white/10" : "bg-slate-100 border-slate-200"
-          }`}
+          className={`flex items-center gap-1 p-1 rounded-xl border w-fit ${isDark ? "bg-white/5 border-white/10" : "bg-slate-100 border-slate-200"
+            }`}
         >
           <button
             onClick={() => setFilter("all")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-              filter === "all"
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${filter === "all"
                 ? "bg-sky-600 text-white shadow-xs"
                 : isDark
-                ? "text-slate-400 hover:text-white"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
+                  ? "text-slate-400 hover:text-white"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
           >
             Semua Jadwal ({calendarEvents.length})
           </button>
           <button
             onClick={() => setFilter("upcoming")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-              filter === "upcoming"
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${filter === "upcoming"
                 ? "bg-sky-600 text-white shadow-xs"
                 : isDark
-                ? "text-slate-400 hover:text-white"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
+                  ? "text-slate-400 hover:text-white"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
           >
             Mendatang
           </button>
           <button
             onClick={() => setFilter("completed")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-              filter === "completed"
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${filter === "completed"
                 ? "bg-sky-600 text-white shadow-xs"
                 : isDark
-                ? "text-slate-400 hover:text-white"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
+                  ? "text-slate-400 hover:text-white"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
           >
             Selesai
           </button>
@@ -269,16 +261,14 @@ export default function DashboardCalendarPage() {
       {/* Events List */}
       {filteredEvents.length === 0 ? (
         <div
-          className={`text-center py-16 px-4 rounded-3xl border ${
-            isDark ? "bg-white/5 border-white/10" : "bg-white border-slate-200 shadow-xs"
-          }`}
+          className={`text-center py-16 px-4 rounded-3xl border ${isDark ? "bg-white/5 border-white/10" : "bg-white border-slate-200 shadow-xs"
+            }`}
         >
           <CalendarCheck className="w-12 h-12 text-slate-500 mx-auto mb-3" />
           <h3 className="text-base font-bold">Belum Ada Jadwal Pertemuan</h3>
           <p
-            className={`text-xs mt-1 max-w-sm mx-auto ${
-              isDark ? "text-slate-400" : "text-slate-500"
-            }`}
+            className={`text-xs mt-1 max-w-sm mx-auto ${isDark ? "text-slate-400" : "text-slate-500"
+              }`}
           >
             Jadwal pertemuan baru akan muncul ketika Anda menambahkannya secara manual, dari aksi tap kartu NFC, atau disinkronkan otomatis dari Action Items MoM.
           </p>
@@ -295,32 +285,29 @@ export default function DashboardCalendarPage() {
           {filteredEvents.map((ev) => (
             <div
               key={ev.id}
-              className={`p-5 rounded-2xl border transition-all duration-200 flex flex-col justify-between group ${
-                isDark
+              className={`p-5 rounded-2xl border transition-all duration-200 flex flex-col justify-between group ${isDark
                   ? "bg-[#0E1A30]/80 border-white/10 hover:border-sky-500/40"
                   : "bg-white border-slate-200 hover:border-sky-300 shadow-xs hover:shadow-md"
-              }`}
+                }`}
             >
               <div>
                 <div className="flex items-start justify-between gap-3 mb-2.5">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`text-[10.5px] font-bold px-2.5 py-0.5 rounded-full border ${
-                        ev.source === "MoM Action Item"
+                      className={`text-[10.5px] font-bold px-2.5 py-0.5 rounded-full border ${ev.source === "MoM Action Item"
                           ? "bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-500/30"
                           : ev.source === "NFC Tap"
-                          ? "bg-cyan-50 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-500/30"
-                          : "bg-slate-100 dark:bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-500/30"
-                      }`}
+                            ? "bg-cyan-50 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-500/30"
+                            : "bg-slate-100 dark:bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-500/30"
+                        }`}
                     >
                       {ev.source}
                     </span>
                     <span
-                      className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${
-                        ev.status === "completed"
+                      className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${ev.status === "completed"
                           ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30"
                           : "bg-sky-50 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30"
-                      }`}
+                        }`}
                     >
                       {ev.status === "completed" ? "Selesai" : "Mendatang"}
                     </span>
@@ -340,9 +327,8 @@ export default function DashboardCalendarPage() {
                 </h3>
 
                 <div
-                  className={`space-y-1.5 text-xs mb-4 ${
-                    isDark ? "text-slate-300" : "text-slate-600"
-                  }`}
+                  className={`space-y-1.5 text-xs mb-4 ${isDark ? "text-slate-300" : "text-slate-600"
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <CalendarIcon className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
@@ -364,9 +350,8 @@ export default function DashboardCalendarPage() {
 
                   {ev.notes && (
                     <p
-                      className={`text-[11px] italic mt-1 pl-2.5 border-l-2 border-sky-500/40 ${
-                        isDark ? "text-slate-400" : "text-slate-500"
-                      }`}
+                      className={`text-[11px] italic mt-1 pl-2.5 border-l-2 border-sky-500/40 ${isDark ? "text-slate-400" : "text-slate-500"
+                        }`}
                     >
                       {ev.notes}
                     </p>
@@ -376,9 +361,8 @@ export default function DashboardCalendarPage() {
 
               {/* Action Buttons */}
               <div
-                className={`pt-3 border-t flex items-center justify-between gap-2 ${
-                  isDark ? "border-white/10" : "border-slate-100"
-                }`}
+                className={`pt-3 border-t flex items-center justify-between gap-2 ${isDark ? "border-white/10" : "border-slate-100"
+                  }`}
               >
                 {/* One click MoM Recording for this specific meeting */}
                 <button
@@ -408,11 +392,10 @@ export default function DashboardCalendarPage() {
                   }
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`text-xs font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition ${
-                    isDark
+                  className={`text-xs font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition ${isDark
                       ? "text-slate-300 hover:text-white hover:bg-white/5"
                       : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  }`}
+                    }`}
                 >
                   <span>Google Calendar</span>
                   <ExternalLink className="w-3 h-3 text-slate-400" />
@@ -427,11 +410,10 @@ export default function DashboardCalendarPage() {
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div
-            className={`border w-full max-w-md rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-150 ${
-              isDark
+            className={`border w-full max-w-md rounded-3xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-150 ${isDark
                 ? "bg-[#0E1A30] border-white/15 text-white"
                 : "bg-white border-slate-200 text-slate-900"
-            }`}
+              }`}
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold">Jadwalkan Pertemuan Baru</h3>
@@ -454,11 +436,10 @@ export default function DashboardCalendarPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Contoh: Rapat Kerjasama Bisnis"
-                  className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 ${
-                    isDark
+                  className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 ${isDark
                       ? "bg-[#070F1E] border-white/15 text-white"
                       : "bg-slate-50 border-slate-200 text-slate-900"
-                  }`}
+                    }`}
                 />
               </div>
 
@@ -472,11 +453,10 @@ export default function DashboardCalendarPage() {
                     required
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 ${
-                      isDark
+                    className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 ${isDark
                         ? "bg-[#070F1E] border-white/15 text-white"
                         : "bg-slate-50 border-slate-200 text-slate-900"
-                    }`}
+                      }`}
                   />
                 </div>
 
@@ -489,11 +469,10 @@ export default function DashboardCalendarPage() {
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
                     placeholder="14:00 - 15:00"
-                    className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 ${
-                      isDark
+                    className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 ${isDark
                         ? "bg-[#070F1E] border-white/15 text-white"
                         : "bg-slate-50 border-slate-200 text-slate-900"
-                    }`}
+                      }`}
                   />
                 </div>
               </div>
@@ -506,12 +485,11 @@ export default function DashboardCalendarPage() {
                   type="text"
                   value={attendees}
                   onChange={(e) => setAttendees(e.target.value)}
-                  placeholder="Nama Anda, Nama Klien"
-                  className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 ${
-                    isDark
+                  placeholder="Deo Cardi Nathanael, Nama Klien"
+                  className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 ${isDark
                       ? "bg-[#070F1E] border-white/15 text-white"
                       : "bg-slate-50 border-slate-200 text-slate-900"
-                  }`}
+                    }`}
                 />
               </div>
 
@@ -524,8 +502,7 @@ export default function DashboardCalendarPage() {
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="Google Meet / Kantor"
-                  className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 ${
-                    isDark
+                  className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 ${isDark
                       ? "bg-[#070F1E] border-white/15 text-white"
                       : "bg-slate-50 border-slate-200 text-slate-900"
                     }`}
@@ -541,11 +518,10 @@ export default function DashboardCalendarPage() {
                   onChange={(e) => setNotes(e.target.value)}
                   rows={2}
                   placeholder="Catatan agenda atau link dokumen pendukung..."
-                  className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 resize-none ${
-                    isDark
+                  className={`w-full border rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500 resize-none ${isDark
                       ? "bg-[#070F1E] border-white/15 text-white"
                       : "bg-slate-50 border-slate-200 text-slate-900"
-                  }`}
+                    }`}
                 />
               </div>
 

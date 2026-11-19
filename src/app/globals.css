@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 @layer base {
   :root {
     /* Cardi Brand Standards - matched to aiagent main & mom.astro */
@@ -139,22 +137,27 @@ body {
 
 /* Holographic foil metallic shine */
 .holo-sheen {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.4) 0%,
-    rgba(255, 255, 255, 0.05) 25%,
-    rgba(0, 194, 209, 0.3) 45%,
-    rgba(30, 79, 255, 0.25) 65%,
-    rgba(212, 175, 55, 0.35) 85%,
-    rgba(255, 255, 255, 0.4) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(255, 255, 255, 0.05) 25%,
+      rgba(0, 194, 209, 0.3) 45%,
+      rgba(30, 79, 255, 0.25) 65%,
+      rgba(212, 175, 55, 0.35) 85%,
+      rgba(255, 255, 255, 0.4) 100%);
   background-size: 200% 200%;
 }
 
 /* Keyframes */
 @keyframes wave-bounce {
-  0%, 100% { height: 8px; }
-  50% { height: 34px; }
+
+  0%,
+  100% {
+    height: 8px;
+  }
+
+  50% {
+    height: 34px;
+  }
 }
 
 .animate-wave-bar {
@@ -162,8 +165,17 @@ body {
 }
 
 @keyframes pulse-record {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(0.88); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.35;
+    transform: scale(0.88);
+  }
 }
 
 .animate-record-dot {
@@ -171,8 +183,15 @@ body {
 }
 
 @keyframes float-gentle {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-8px) rotate(0.8deg); }
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-8px) rotate(0.8deg);
+  }
 }
 
 .animate-float {
@@ -180,8 +199,13 @@ body {
 }
 
 @keyframes shine-sweep {
-  0% { transform: translateX(-150%) skewX(-20deg); }
-  100% { transform: translateX(250%) skewX(-20deg); }
+  0% {
+    transform: translateX(-150%) skewX(-20deg);
+  }
+
+  100% {
+    transform: translateX(250%) skewX(-20deg);
+  }
 }
 
 .animate-shine {
@@ -192,6 +216,7 @@ body {
 .btn-press {
   transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease;
 }
+
 .btn-press:active {
   transform: scale(0.96);
 }

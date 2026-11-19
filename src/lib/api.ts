@@ -109,42 +109,19 @@ export class CardiApiClient {
     );
   }
 
-  // 4. S3 Presigned URL & Direct Upload Hand-off
-  async getUploadPresignedUrl(
-    meetingId: string,
-    ext = "webm"
-  ): Promise<{ uploadUrl: string; key: string }> {
-    return await this.request<{ uploadUrl: string; key: string }>(
-      `/meetings/${encodeURIComponent(meetingId)}/upload-url`,
-      {
-        method: "POST",
-        body: JSON.stringify({ ext }),
-      }
-    );
+  // 4. S3 Presigned URL & Upload
+  async getUploadPresignedUrl(filename: string): Promise<{ uploadUrl: string; key: string }> {
+    return await this.request<{ uploadUrl: string; key: string }>("/audio/presigned-url", {
+      method: "POST",
+      body: JSON.stringify({ filename }),
+    });
   }
 
-  async confirmUploadComplete(
-    meetingId: string,
-    data: { key: string; durationMs: number; sizeBytes: number }
-  ): Promise<{ meeting: Meeting }> {
-    return await this.request<{ meeting: Meeting }>(
-      `/meetings/${encodeURIComponent(meetingId)}/upload-complete`,
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      }
-    );
-  }
-
-  async uploadAudioToS3(
-    uploadUrl: string,
-    blob: Blob,
-    contentType = "audio/webm"
-  ): Promise<boolean> {
+  async uploadAudioToS3(uploadUrl: string, blob: Blob): Promise<boolean> {
     const res = await fetch(uploadUrl, {
       method: "PUT",
       body: blob,
-      headers: { "Content-Type": contentType },
+      headers: { "Content-Type": "audio/m4a" },
     });
     return res.ok;
   }
@@ -188,17 +165,6 @@ export class CardiApiClient {
     }
   }
 
-  async recordContactSave(username: string): Promise<{ success: boolean }> {
-    try {
-      return await this.request<{ success: boolean }>(
-        `/nfc/profile/${encodeURIComponent(username.toLowerCase())}/contact-save`,
-        { method: "POST" }
-      );
-    } catch {
-      return { success: false };
-    }
-  }
-
   async activateCard(data: {
     tagId: string;
     username: string;
@@ -233,6 +199,17 @@ export class CardiApiClient {
       body: JSON.stringify(profile),
     });
     return res.profile;
+  }
+
+  async recordContactSave(username: string): Promise<boolean> {
+    try {
+      await this.request(`/nfc/profile/${username}/contact-save`, {
+        method: "POST",
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

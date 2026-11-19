@@ -11,9 +11,6 @@ interface GoogleTokenPayload {
   email_verified?: boolean;
   name?: string;
   picture?: string;
-  given_name?: string;
-  family_name?: string;
-  exp?: number;
 }
 
 function decodeJwtPayload(token: string): GoogleTokenPayload | null {
@@ -24,8 +21,7 @@ function decodeJwtPayload(token: string): GoogleTokenPayload | null {
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
     const jsonPayload = Buffer.from(base64, "base64").toString("utf-8");
     return JSON.parse(jsonPayload) as GoogleTokenPayload;
-  } catch (err) {
-    console.error("Gagal mendekode Google JWT:", err);
+  } catch {
     return null;
   }
 }
@@ -37,67 +33,72 @@ export async function POST(req: NextRequest) {
 
     if (!idToken || typeof idToken !== "string") {
       return NextResponse.json(
-        { error: "idToken wajib diisi" },
+        { error: "idToken Google wajib disertakan." },
         { status: 400 }
       );
     }
 
     const decoded = decodeJwtPayload(idToken);
-    if (!decoded || !decoded.email) {
+    if (!decoded || !decoded.email || !decoded.sub) {
       return NextResponse.json(
-        { error: "Token Google tidak valid" },
+        { error: "Format token Google tidak valid." },
         { status: 400 }
       );
     }
 
-    const effectiveDeviceId =
+    const resolvedDeviceId =
       typeof deviceId === "string" && deviceId.trim().length > 0
         ? deviceId.trim()
-        : "web_nfc_portal";
+        : `web_${decoded.sub.slice(0, 12)}`;
 
     const backendRes = await fetch(`${CARDI_API_URL}/auth/google`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         idToken,
-        deviceId: effectiveDeviceId,
+        deviceId: resolvedDeviceId,
       }),
     });
 
     if (!backendRes.ok) {
-      let errorMessage = `Autentikasi Google gagal (${backendRes.status})`;
+      const errText = await backendRes.text().catch(() => "");
+      let message = `Backend menolak autentikasi Google (${backendRes.status})`;
       try {
-        const errJson = await backendRes.json();
-        errorMessage = errJson.message || errJson.error || errorMessage;
+        const parsed = JSON.parse(errText);
+        if (typeof parsed?.message === "string" && parsed.message.length > 0) {
+          message = parsed.message;
+        } else if (typeof parsed?.error === "string" && parsed.error.length > 0) {
+          message = parsed.error;
+        }
       } catch {
-        // use default message
+        // Keep default message if response is not JSON
       }
+
       return NextResponse.json(
-        { error: errorMessage },
+        { error: message },
         { status: backendRes.status }
       );
     }
 
     const backendData = await backendRes.json();
-
-    const account = {
-      ...backendData.account,
-      name:
-        decoded.name ||
-        backendData.account?.name ||
-        decoded.email.split("@")[0],
-      avatarUrl: decoded.picture || backendData.account?.avatarUrl || "",
-    };
+    const displayName =
+      decoded.name || backendData.account?.name || decoded.email.split("@")[0];
 
     return NextResponse.json({
       sessionToken: backendData.sessionToken,
-      account,
+      account: {
+        ...backendData.account,
+        email: backendData.account?.email || decoded.email,
+        name: displayName,
+        avatarUrl: decoded.picture || backendData.account?.avatarUrl || "",
+        coinBalance: backendData.account?.coinsBalance ?? 0,
+      },
     });
   } catch (error) {
-    console.error("Error pada /api/auth/google:", error);
+    console.error("Error /api/auth/google:", error);
     return NextResponse.json(
-      { error: "Terjadi kesalahan internal pada otentikasi Google" },
-      { status: 500 }
+      { error: "Gagal terhubung ke server autentikasi Cardi." },
+      { status: 502 }
     );
   }
 }

@@ -1,104 +1,151 @@
-import { NextRequest, NextResponse } from "next/server";
-import { CardProfile } from "@/lib/types";
-import { upsertCardProfile } from "@/lib/server/db";
+import { NextResponse } from "next/server";
+import {
+  getCardProfileByTagId,
+  getCardProfileByUsername,
+  upsertCardProfile,
+} from "@/lib/server/db";
 
-const CARDI_API_URL =
-  process.env.CARDI_API_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://fuldtvg7vk.execute-api.ap-southeast-1.amazonaws.com";
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const body = await req.json();
     const {
-      tagId = "CRD-89421",
-      username = "user",
-      email = "user@cardi.co.id",
-      fullName = "Pengguna Cardi",
-      headline = "Professional & Business Leader",
-      company = "Cardi",
-      phone = "",
-      bundleTier = "quick",
-      cardDesign = "black-gold",
-      website = "https://www.cardi.co.id",
-      location = "Indonesia",
-      bio = "Pengguna kartu bisnis pintar Cardi Smart NFC Card dan AI MoM.",
+      tagId,
+      username,
+      email,
+      fullName,
+      headline,
+      company,
+      phone,
+      website,
+      location,
+      bio,
+      bundleTier,
+      cardDesign,
     } = body;
 
-    const cleanUsername =
-      String(username).toLowerCase().replace(/[^a-z0-9_-]/g, "") || "user";
-    const cleanTagId = String(tagId).trim().toUpperCase();
-    const cleanEmail = String(email).trim().toLowerCase();
+    // Validate tagId
+    if (!tagId || typeof tagId !== "string" || !tagId.trim()) {
+      return NextResponse.json(
+        { success: false, error: "Tag ID kartu NFC wajib diisi." },
+        { status: 400 }
+      );
+    }
+    const cleanTag = tagId.trim().toUpperCase();
 
-    let coinsCredited = 0;
-    if (bundleTier === "bulk") coinsCredited = 2500;
-    else if (bundleTier === "quick") coinsCredited = 500;
+    // Validate username format (3 to 30 characters, a-z, 0-9, _, -)
+    if (!username || typeof username !== "string") {
+      return NextResponse.json(
+        { success: false, error: "Username wajib diisi." },
+        { status: 400 }
+      );
+    }
+    const cleanUser = username.trim().toLowerCase();
+    const usernameRegex = /^[a-z0-9_-]{3,30}$/;
+    if (!usernameRegex.test(cleanUser)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Username harus terdiri dari 3-30 karakter alfanumerik (huruf kecil, angka, garis bawah, atau strip).",
+        },
+        { status: 400 }
+      );
+    }
 
-    const nowIso = new Date().toISOString();
+    // Check if tagId is already bound to another card profile in database
+    const existingTagProfile = getCardProfileByTagId(cleanTag);
+    if (existingTagProfile) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Tag ID ${cleanTag} sudah terdaftar dan terikat pada profil @${existingTagProfile.username}.`,
+        },
+        { status: 409 }
+      );
+    }
 
-    const profileToSave: Partial<CardProfile> & { username: string } = {
-      username: cleanUsername,
-      tagId: cleanTagId,
-      fullName: String(fullName).trim(),
-      headline: String(headline).trim(),
-      company: String(company).trim(),
-      phone: String(phone).trim(),
-      email: cleanEmail,
-      website: String(website).trim(),
-      location: String(location).trim(),
-      bio: String(bio).trim(),
-      avatarUrl: "",
-      cardDesign: cardDesign as "black-gold" | "royal-blue" | "silver-minimal",
+    // Check if username is already taken by another profile in database
+    const existingUserProfile = getCardProfileByUsername(cleanUser);
+    if (existingUserProfile) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Username @${cleanUser} sudah digunakan. Silakan pilih username lain.`,
+        },
+        { status: 409 }
+      );
+    }
+
+    // Determine coin bonus based on bundleTier
+    let coinsCredited = 50;
+    if (bundleTier === "bulk") {
+      coinsCredited = 2500;
+    } else if (bundleTier === "quick") {
+      coinsCredited = 500;
+    } else if (bundleTier === "card_only" || bundleTier === "none") {
+      coinsCredited = 50;
+    }
+    const totalCoinsBalance = coinsCredited;
+
+    const userEmail =
+      email && typeof email === "string" && email.trim()
+        ? email.trim()
+        : `${cleanUser}@cardi.co.id`;
+
+    const userFullName =
+      fullName && typeof fullName === "string" && fullName.trim()
+        ? fullName.trim()
+        : "Pengguna Cardi";
+
+    // Persist card profile to SQLite
+    const profile = upsertCardProfile({
+      username: cleanUser,
+      tagId: cleanTag,
+      fullName: userFullName,
+      headline:
+        headline && typeof headline === "string" && headline.trim()
+          ? headline.trim()
+          : "Professional & Business Leader",
+      company:
+        company && typeof company === "string" && company.trim()
+          ? company.trim()
+          : "Cardi",
+      phone: phone && typeof phone === "string" ? phone.trim() : "",
+      email: userEmail,
+      website:
+        website && typeof website === "string" && website.trim()
+          ? website.trim()
+          : "https://www.cardi.co.id",
+      location:
+        location && typeof location === "string" && location.trim()
+          ? location.trim()
+          : "Indonesia",
+      bio:
+        bio && typeof bio === "string" && bio.trim()
+          ? bio.trim()
+          : "Pengguna kartu bisnis pintar Cardi Smart NFC Card dan AI MoM.",
+      cardDesign: cardDesign || "black-gold",
       isActivated: true,
       socials: {
         ...(phone ? { whatsapp: `https://wa.me/${phone.replace(/[^0-9]/g, "")}` } : {}),
       },
-      metrics: {
-        totalTaps: 1,
-        contactsSaved: 0,
-        momInitiated: 0,
-      },
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    };
-
-    // Persist to local SQLite database
-    const savedProfile = upsertCardProfile(profileToSave);
-
-    // Forward to remote API if accessible, with 4 second timeout
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 1000);
-
-      const remoteRes = await fetch(`${CARDI_API_URL}/nfc/activate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (remoteRes.ok) {
-        const remoteData = await remoteRes.json();
-        return NextResponse.json(remoteData);
-      }
-    } catch {
-      // Remote backend offline or unconfigured, fallback to local persistent activation response
-    }
+    });
 
     return NextResponse.json({
       success: true,
-      username: cleanUsername,
-      tagId: cleanTagId,
-      email: cleanEmail,
+      username: cleanUser,
+      tagId: cleanTag,
+      email: profile.email,
       coinsCredited,
-      totalCoinsBalance: coinsCredited,
-      profile: savedProfile,
+      totalCoinsBalance,
+      profile,
     });
   } catch (err: any) {
-    console.error("Error pada /api/nfc/activate:", err);
     return NextResponse.json(
-      { error: err?.message || "Gagal mengaktifkan kartu" },
+      {
+        success: false,
+        error: err?.message || "Terjadi kesalahan internal saat aktivasi kartu.",
+      },
       { status: 500 }
     );
   }

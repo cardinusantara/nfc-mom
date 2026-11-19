@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import QRCode from "qrcode";
 import {
   Smartphone,
   QrCode,
@@ -15,7 +14,6 @@ import {
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { cardiApi } from "@/lib/api";
-import { Meeting } from "@/lib/types";
 
 interface PairingModalProps {
   isOpen: boolean;
@@ -23,12 +21,11 @@ interface PairingModalProps {
 }
 
 export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
-  const { account, setPairedApp, updateCoinBalance, setMeetings } = useAppStore();
+  const { account, setPairedApp, updateCoinBalance } = useAppStore();
   const [tab, setTab] = useState<"qr" | "email">("qr");
 
   // Real QR Pairing State
   const [pairingId, setPairingId] = useState<string>("");
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [isLoadingPairing, setIsLoadingPairing] = useState(false);
   const [pairingExpired, setPairingExpired] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -60,13 +57,6 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
       const res = await cardiApi.startPairing();
       setPairingId(res.pairingId);
 
-      const dataUrl = await QRCode.toDataURL(res.pairingId, {
-        width: 220,
-        margin: 1,
-        color: { dark: "#0F172A", light: "#FFFFFF" },
-      });
-      setQrDataUrl(dataUrl);
-
       // Start polling loop every 2.5s
       pollTimerRef.current = setInterval(async () => {
         try {
@@ -81,21 +71,7 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
             });
             const coins = pollRes.account.coinsBalance ?? pollRes.account.coinBalance ?? 0;
             updateCoinBalance(coins);
-
-            // Sync live meetings from mobile app
-            try {
-              const syncRes = await cardiApi.syncMeetings();
-              if (syncRes.entries) {
-                const liveMeetings = syncRes.entries
-                  .filter((e) => !e.deleted && e.meeting)
-                  .map((e) => (e as { deleted: false; meeting: Meeting }).meeting);
-                setMeetings(liveMeetings);
-              }
-            } catch {
-              // ignore
-            }
-
-            setSuccessMessage("Aplikasi Cardi MoM berhasil terhubung! Koin dan rekaman disinkronkan.");
+            setSuccessMessage("Aplikasi Cardi MoM berhasil terhubung! Koin disinkronkan.");
             setTimeout(() => {
               setSuccessMessage(null);
               onClose();
@@ -181,6 +157,10 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
     setPairedApp(null);
   };
 
+  const qrImageUrl = pairingId
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pairingId)}`
+    : "";
+
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-[#18181b] border border-white/15 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150 text-white">
@@ -233,22 +213,20 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
           <div className="flex border-b border-white/10 mb-5">
             <button
               onClick={() => setTab("qr")}
-              className={`flex-1 pb-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition ${
-                tab === "qr"
+              className={`flex-1 pb-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition ${tab === "qr"
                   ? "border-[#3b7cfa] text-[#3b7cfa]"
                   : "border-transparent text-white/50 hover:text-white"
-              }`}
+                }`}
             >
               <QrCode className="w-4 h-4" />
               <span>Scan QR Aplikasi</span>
             </button>
             <button
               onClick={() => setTab("email")}
-              className={`flex-1 pb-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition ${
-                tab === "email"
+              className={`flex-1 pb-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition ${tab === "email"
                   ? "border-[#3b7cfa] text-[#3b7cfa]"
                   : "border-transparent text-white/50 hover:text-white"
-              }`}
+                }`}
             >
               <Mail className="w-4 h-4" />
               <span>Email Akun MoM</span>
@@ -281,10 +259,10 @@ export default function PairingModal({ isOpen, onClose }: PairingModalProps) {
                     Muat Ulang
                   </button>
                 </div>
-              ) : qrDataUrl ? (
+              ) : qrImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={qrDataUrl}
+                  src={qrImageUrl}
                   alt="Scan QR Pairing Code"
                   width={200}
                   height={200}

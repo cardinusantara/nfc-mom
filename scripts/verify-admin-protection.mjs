@@ -215,6 +215,16 @@ async function run() {
   }));
   assert(unitDimasJwt.authorized === true && unitDimasJwt.status === 200, "verifyAdminRequest returns 200 for valid dimasaldi428 JWT");
 
+  const unitMultiDotOpaqueToken = verifyAdminRequest(new Request("http://localhost/api/admin/cards", {
+    headers: { authorization: "Bearer tok_dimas.aldi.428_active", "x-admin-email": "dimasaldi428@gmail.com" },
+  }));
+  assert(unitMultiDotOpaqueToken.authorized === true && unitMultiDotOpaqueToken.status === 200, "verifyAdminRequest returns 200 for multi-dot opaque token with admin email");
+
+  const unitUrlEncodedJwt = verifyAdminRequest(new Request("http://localhost/api/admin/cards", {
+    headers: { authorization: `Bearer ${encodeURIComponent(createUnitTestJwt({ email: "dimasaldi428@gmail.com", exp: nowSecUnit + 3600 }))}` },
+  }));
+  assert(unitUrlEncodedJwt.authorized === true && unitUrlEncodedJwt.status === 200, "verifyAdminRequest returns 200 for URL-encoded JWT");
+
   // 1d. Client State & Session Hydration Matrix Simulation
   console.log("\n--- TEST 1d: Client Session Hydration Matrix Simulation ---");
   const simulateClientGuards = ({ hasHydrated, sessionToken, accountEmail }) => {
@@ -625,6 +635,21 @@ async function run() {
       headers: { Authorization: "Bearer cardinusantara@gmail.com" },
     });
     assert(rawEmailTokenRes.status === 401, `GET with raw email as Bearer token returns 401 (got ${rawEmailTokenRes.status})`);
+
+    const multiDotOpaqueRes = await fetch(`http://localhost:${testPort}/api/admin/cards`, {
+      headers: {
+        Authorization: "Bearer tok_dimas.aldi.428_active",
+        "x-admin-email": "dimasaldi428@gmail.com",
+      },
+    });
+    assert(multiDotOpaqueRes.status === 200, `GET with multi-dot opaque token + admin email returns 200 OK (got ${multiDotOpaqueRes.status})`);
+
+    const urlEncodedJwtRes = await fetch(`http://localhost:${testPort}/api/admin/cards`, {
+      headers: {
+        Authorization: `Bearer ${encodeURIComponent(createJwt({ email: "dimasaldi428@gmail.com", exp: nowSec + 3600 }))}`,
+      },
+    });
+    assert(urlEncodedJwtRes.status === 200, `GET with URL-encoded JWT returns 200 OK (got ${urlEncodedJwtRes.status})`);
 
     // Test 12: Public & Unauthenticated UI Visibility via SSR
     console.log("\n--- TEST 12: Public & Regular User UI Visibility Audits ---");

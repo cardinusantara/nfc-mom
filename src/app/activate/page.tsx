@@ -46,24 +46,44 @@ function ActivateContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tagParam = searchParams.get("tag") || "CRD-89421";
+  const userParam =
+    searchParams.get("username") ||
+    searchParams.get("handle") ||
+    searchParams.get("slug") ||
+    "";
+  const redirectParam = searchParams.get("redirect");
+  const autoLoginParam = searchParams.get("autoLogin") === "true";
 
-  const { theme, updateCardProfile, setSession, addCoins } = useAppStore();
+  const { theme, account, sessionToken, updateCardProfile, setSession, addCoins } =
+    useAppStore();
   const isDark = theme === "dark";
+
+  const isLoggedIn = Boolean(
+    sessionToken &&
+      sessionToken.trim() !== "" &&
+      account?.email &&
+      account.email.trim() !== ""
+  );
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [tagId, setTagId] = useState(tagParam);
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(
+    userParam ? userParam.toLowerCase().replace(/[^a-z0-9_-]/g, "") : ""
+  );
   const [fullName, setFullName] = useState("");
   const [headline, setHeadline] = useState("");
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [cardDesign, setCardDesign] = useState<"black-gold" | "royal-blue" | "silver-minimal">("black-gold");
+  const [cardDesign, setCardDesign] = useState<
+    "black-gold" | "royal-blue" | "silver-minimal"
+  >("black-gold");
   const [bundleTier, setBundleTier] = useState<"none" | "quick" | "bulk">("quick");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [creditedCoins, setCreditedCoins] = useState(0);
   const [isActivating, setIsActivating] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [activatedData, setActivatedData] = useState<any>(null);
 
   useEffect(() => {
     if (tagParam) {
@@ -71,16 +91,64 @@ function ActivateContent() {
     }
   }, [tagParam]);
 
+  useEffect(() => {
+    if (userParam) {
+      setUsername(userParam.toLowerCase().replace(/[^a-z0-9_-]/g, ""));
+    }
+  }, [userParam]);
+
+  const handleLoginToDashboard = () => {
+    const cleanUser =
+      username.toLowerCase().replace(/[^a-z0-9_-]/g, "") || "user";
+    const userFullName = fullName.trim() || "Nama Pengguna";
+    const userEmail = email.trim() || `${cleanUser}@cardi.co.id`;
+    const coins =
+      creditedCoins > 0
+        ? creditedCoins
+        : bundleTier === "bulk"
+          ? 2500
+          : bundleTier === "quick"
+            ? 500
+            : 50;
+
+    setSession(`tok_${cleanUser}_active`, {
+      email: userEmail,
+      name: userFullName,
+      coinsBalance: coins,
+      coinBalance: coins,
+      freemiumGranted: true,
+      subscription: {
+        status: coins > 0 ? "active" : "none",
+        tier:
+          bundleTier === "bulk" ? "team" : bundleTier === "quick" ? "pro" : "free",
+        currentPeriodEnd: "2027-12-31T00:00:00Z",
+      },
+      pairedApp: null,
+    });
+    if (activatedData?.profile) {
+      updateCardProfile(activatedData.profile);
+    }
+    if (coins > 0) {
+      addCoins(
+        coins,
+        `Aktivasi Paket Bundling Kartu (${bundleTier.toUpperCase()})`
+      );
+    }
+    router.push("/dashboard/card");
+  };
+
   const handleCompleteActivation = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setIsActivating(true);
 
-    const cleanUser = username.toLowerCase().replace(/[^a-z0-9_-]/g, "") || "user";
+    const cleanUser =
+      username.toLowerCase().replace(/[^a-z0-9_-]/g, "") || "user";
     const userFullName = fullName.trim() || "Nama Pengguna";
     const userEmail = email.trim() || `${cleanUser}@cardi.co.id`;
 
     let resData: {
+      success: boolean;
       coinsCredited: number;
       totalCoinsBalance: number;
       profile: any;
@@ -98,92 +166,87 @@ function ActivateContent() {
         bundleTier,
         cardDesign,
       });
-    } catch (err: any) {
-      console.warn("API activation error, using local fallback:", err);
-      let coins = 0;
-      if (bundleTier === "bulk") coins = 2500;
-      else if (bundleTier === "quick") coins = 500;
 
-      resData = {
-        coinsCredited: coins,
-        totalCoinsBalance: coins,
-        profile: {
-          username: cleanUser,
-          fullName: userFullName,
-          headline: headline.trim() || "Professional & Business Leader",
-          company: company.trim() || "Cardi",
-          phone: phone.trim() || "",
-          email: userEmail,
-          website: "https://www.cardi.co.id",
-          location: "Indonesia",
-          bio: "Pengguna kartu bisnis pintar Cardi Smart NFC Card dan AI MoM.",
-          avatarUrl: "",
-          cardDesign,
-          isActivated: true,
-          tagId: tagId.trim().toUpperCase() || "CRD-ACT-001",
-          socials: {
-            ...(phone ? { whatsapp: `https://wa.me/${phone.replace(/[^0-9]/g, "")}` } : {}),
-          },
-          metrics: {
-            totalTaps: 1,
-            contactsSaved: 0,
-            momInitiated: 0,
-          },
-        },
-      };
+      if (!resData || (resData as any).success === false) {
+        throw new Error(
+          (resData as any)?.error || "Gagal mengaktifkan kartu."
+        );
+      }
+    } catch (err: any) {
+      setIsActivating(false);
+      setErrorMessage(
+        err?.message ||
+          "Gagal mengaktifkan kartu. Periksa koneksi atau coba lagi nanti."
+      );
+      return;
     }
 
     try {
       setCreditedCoins(resData.coinsCredited);
+      setActivatedData(resData);
 
-      // Update global store with the user's card profile
-      updateCardProfile({
-        ...resData.profile,
-        isActivated: true,
-        tagId: (resData as { tagId?: string })?.tagId || tagId.trim().toUpperCase() || "CRD-ACT-001",
-      });
-
-      // Initialize user account & session
-      setSession(`tok_${cleanUser}_active`, {
-        email: userEmail,
-        name: userFullName,
-        coinsBalance: resData.totalCoinsBalance,
-        coinBalance: resData.totalCoinsBalance,
-        freemiumGranted: true,
-        subscription: {
-          status: resData.coinsCredited > 0 ? "active" : "none",
-          tier: bundleTier === "bulk" ? "team" : bundleTier === "quick" ? "pro" : "free",
-          currentPeriodEnd: "2027-12-31T00:00:00Z",
-        },
-        pairedApp: null,
-      });
-
-      if (resData.coinsCredited > 0) {
-        addCoins(resData.coinsCredited, `Aktivasi Paket Bundling Kartu (${bundleTier.toUpperCase()})`);
+      if (isLoggedIn) {
+        // Logged in user: preserve session without hijacking
+        if (
+          account?.email &&
+          account.email.toLowerCase() === userEmail.toLowerCase()
+        ) {
+          updateCardProfile(resData.profile);
+        }
+        setIsActivating(false);
+        setIsSuccess(true);
+      } else {
+        // Anonymous visitor
+        if (redirectParam || autoLoginParam) {
+          setSession(`tok_${cleanUser}_active`, {
+            email: userEmail,
+            name: userFullName,
+            coinsBalance: resData.totalCoinsBalance,
+            coinBalance: resData.totalCoinsBalance,
+            freemiumGranted: true,
+            subscription: {
+              status: resData.coinsCredited > 0 ? "active" : "none",
+              tier:
+                bundleTier === "bulk"
+                  ? "team"
+                  : bundleTier === "quick"
+                    ? "pro"
+                    : "free",
+              currentPeriodEnd: "2027-12-31T00:00:00Z",
+            },
+            pairedApp: null,
+          });
+          updateCardProfile(resData.profile);
+          if (resData.coinsCredited > 0) {
+            addCoins(
+              resData.coinsCredited,
+              `Aktivasi Paket Bundling Kartu (${bundleTier.toUpperCase()})`
+            );
+          }
+          setIsActivating(false);
+          setIsSuccess(true);
+          const target = redirectParam || `/${cleanUser}`;
+          setTimeout(() => {
+            router.push(target);
+          }, 2500);
+        } else {
+          // Do not call setSession during activation when not explicitly requested
+          setIsActivating(false);
+          setIsSuccess(true);
+        }
       }
-
-      setIsActivating(false);
-      setIsSuccess(true);
-
-      setTimeout(() => {
-        router.push(`/${cleanUser}`);
-      }, 2500);
     } catch (err: any) {
       setIsActivating(false);
-      setErrorMessage(
-        err?.message || "Gagal mengaktifkan kartu. Periksa koneksi atau coba lagi nanti."
-      );
+      setErrorMessage(err?.message || "Gagal menyelesaikan aktivasi kartu.");
     }
   };
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
-      isDark ? "bg-[#070D1E] text-white" : "bg-[#F8FAFD] text-slate-900"
-    }`}>
-      {/* Header Bar */}
-      <header className={`border-b backdrop-blur-md sticky top-0 z-40 transition-colors ${
-        isDark ? "border-white/10 bg-[#0B1528]/80" : "border-slate-200 bg-white/90 shadow-xs"
+    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${isDark ? "bg-[#070D1E] text-white" : "bg-[#F8FAFD] text-slate-900"
       }`}>
+      {/* Header Bar */}
+      <header className={`border-b backdrop-blur-md sticky top-0 z-40 transition-colors ${isDark ? "border-white/10 bg-[#0B1528]/80" : "border-slate-200 bg-white/90 shadow-xs"
+        }`}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center">
             <CardiMomLogo size="sm" colorMode={isDark ? "dark" : "light"} showTagline />
@@ -205,9 +268,13 @@ function ActivateContent() {
       <main className="flex-1 max-w-6xl mx-auto px-6 py-10 w-full">
         {isSuccess ? (
           /* Success Screen */
-          <div className={`max-w-lg mx-auto border rounded-3xl p-8 sm:p-10 text-center shadow-xl animate-in zoom-in-95 duration-200 ${
-            isDark ? "bg-[#0E1A33] border-emerald-500/40" : "bg-white border-emerald-300 shadow-emerald-500/5"
-          }`}>
+          <div
+            className={`max-w-lg mx-auto border rounded-3xl p-8 sm:p-10 text-center shadow-xl animate-in zoom-in-95 duration-200 ${
+              isDark
+                ? "bg-[#0E1A33] border-emerald-500/40"
+                : "bg-white border-emerald-300 shadow-emerald-500/5"
+            }`}
+          >
             <div className="w-20 h-20 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/10">
               <CheckCircle2 className="w-10 h-10 animate-bounce" />
             </div>
@@ -228,9 +295,29 @@ function ActivateContent() {
               </strong>
             </p>
 
-            <div className={`p-4 rounded-2xl border text-left text-xs space-y-2 mb-6 ${
-              isDark ? "bg-white/5 border-white/10 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-700"
-            }`}>
+            {isLoggedIn ? (
+              <div className="mb-6 p-4 rounded-2xl bg-sky-500/10 border border-sky-500/25 text-left text-xs space-y-1.5">
+                <div className="flex items-center gap-2 font-bold text-sky-600 dark:text-sky-400">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Sesi Login Terlindungi</span>
+                </div>
+                <p className="text-slate-600 dark:text-slate-300">
+                  Kartu berhasil diaktifkan. Sesi Anda tetap aktif sebagai{" "}
+                  <strong className="font-mono text-sky-700 dark:text-sky-300">
+                    {account?.email}
+                  </strong>
+                  .
+                </p>
+              </div>
+            ) : null}
+
+            <div
+              className={`p-4 rounded-2xl border text-left text-xs space-y-2 mb-6 ${
+                isDark
+                  ? "bg-white/5 border-white/10 text-slate-300"
+                  : "bg-slate-50 border-slate-200 text-slate-700"
+              }`}
+            >
               <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
                 <Sparkles className="w-4 h-4 text-amber-500" />
                 <span>Kartu Siap Digunakan Langsung:</span>
@@ -249,31 +336,76 @@ function ActivateContent() {
               )}
             </div>
 
-            <p className="text-xs text-slate-500 dark:text-white/40 flex items-center justify-center gap-1.5 animate-pulse">
-              <span>Mengalihkan ke kartu digital publik Anda...</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </p>
+            {isLoggedIn ? (
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link
+                  href={`/${username}`}
+                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-gradient-to-r from-sky-600 to-cyan-500 hover:from-sky-700 hover:to-cyan-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition"
+                >
+                  <span>Lihat Profil Publik (cardi.co.id/{username})</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+                <Link
+                  href="/dashboard/card"
+                  className={`w-full sm:w-auto px-5 py-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 transition ${
+                    isDark
+                      ? "bg-white/5 hover:bg-white/10 border-white/10 text-white"
+                      : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700"
+                  }`}
+                >
+                  <span>Kembali ke Dashboard</span>
+                </Link>
+              </div>
+            ) : redirectParam || autoLoginParam ? (
+              <p className="text-xs text-slate-500 dark:text-white/40 flex items-center justify-center gap-1.5 animate-pulse">
+                <span>Mengalihkan ke kartu digital publik Anda...</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <Link
+                    href={`/${username}`}
+                    className="w-full sm:w-auto px-5 py-3 rounded-xl bg-gradient-to-r from-sky-600 to-cyan-500 hover:from-sky-700 hover:to-cyan-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition"
+                  >
+                    <span>Lihat Profil Publik (cardi.co.id/{username})</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleLoginToDashboard}
+                    className={`w-full sm:w-auto px-5 py-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer ${
+                      isDark
+                        ? "bg-white/5 hover:bg-white/10 border-white/10 text-white"
+                        : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    <span>Masuk ke Dashboard Akun</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                  Sesi login belum dibuat. Anda dapat melihat profil publik secara langsung atau masuk ke dashboard akun.
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           /* Step-by-Step Activation Wizard */
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left Column: Form (7 cols) */}
-            <div className={`lg:col-span-7 border rounded-3xl p-6 sm:p-8 shadow-sm ${
-              isDark ? "bg-[#0E1A30] border-white/10" : "bg-white border-slate-200"
-            }`}>
-              {/* Stepper indicator */}
-              <div className={`flex items-center justify-between mb-8 pb-4 border-b ${
-                isDark ? "border-white/10" : "border-slate-100"
+            <div className={`lg:col-span-7 border rounded-3xl p-6 sm:p-8 shadow-sm ${isDark ? "bg-[#0E1A30] border-white/10" : "bg-white border-slate-200"
               }`}>
+              {/* Stepper indicator */}
+              <div className={`flex items-center justify-between mb-8 pb-4 border-b ${isDark ? "border-white/10" : "border-slate-100"
+                }`}>
                 <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                    step >= 1 ? "bg-sky-600 text-white" : "bg-slate-100 dark:bg-white/10 text-slate-400"
-                  }`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step >= 1 ? "bg-sky-600 text-white" : "bg-slate-100 dark:bg-white/10 text-slate-400"
+                    }`}>
                     1
                   </div>
-                  <span className={`text-xs font-semibold ${
-                    step >= 1 ? "text-slate-900 dark:text-white font-bold" : "text-slate-400"
-                  }`}>
+                  <span className={`text-xs font-semibold ${step >= 1 ? "text-slate-900 dark:text-white font-bold" : "text-slate-400"
+                    }`}>
                     Klaim Tautan
                   </span>
                 </div>
@@ -281,14 +413,12 @@ function ActivateContent() {
                 <div className={`w-8 h-px ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
 
                 <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                    step >= 2 ? "bg-sky-600 text-white" : "bg-slate-100 dark:bg-white/10 text-slate-400"
-                  }`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step >= 2 ? "bg-sky-600 text-white" : "bg-slate-100 dark:bg-white/10 text-slate-400"
+                    }`}>
                     2
                   </div>
-                  <span className={`text-xs font-semibold ${
-                    step >= 2 ? "text-slate-900 dark:text-white font-bold" : "text-slate-400"
-                  }`}>
+                  <span className={`text-xs font-semibold ${step >= 2 ? "text-slate-900 dark:text-white font-bold" : "text-slate-400"
+                    }`}>
                     Data Profil
                   </span>
                 </div>
@@ -296,14 +426,12 @@ function ActivateContent() {
                 <div className={`w-8 h-px ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
 
                 <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                    step >= 3 ? "bg-sky-600 text-white" : "bg-slate-100 dark:bg-white/10 text-slate-400"
-                  }`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step >= 3 ? "bg-sky-600 text-white" : "bg-slate-100 dark:bg-white/10 text-slate-400"
+                    }`}>
                     3
                   </div>
-                  <span className={`text-xs font-semibold ${
-                    step >= 3 ? "text-slate-900 dark:text-white font-bold" : "text-slate-400"
-                  }`}>
+                  <span className={`text-xs font-semibold ${step >= 3 ? "text-slate-900 dark:text-white font-bold" : "text-slate-400"
+                    }`}>
                     Desain Kartu
                   </span>
                 </div>
@@ -332,11 +460,10 @@ function ActivateContent() {
                         value={tagId}
                         onChange={(e) => setTagId(e.target.value.toUpperCase())}
                         placeholder="CRD-XXXXX"
-                        className={`w-full rounded-xl px-4 py-3 text-sm font-mono tracking-wider font-bold border focus:outline-none focus:border-sky-500 transition ${
-                          isDark
+                        className={`w-full rounded-xl px-4 py-3 text-sm font-mono tracking-wider font-bold border focus:outline-none focus:border-sky-500 transition ${isDark
                             ? "bg-slate-900/60 border-white/15 text-[#00C2D1]"
                             : "bg-slate-50 border-slate-300 text-sky-700"
-                        }`}
+                          }`}
                         required
                       />
                       <span className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15 px-3 py-3 rounded-xl font-bold whitespace-nowrap border border-emerald-200 dark:border-emerald-500/30">
@@ -346,20 +473,31 @@ function ActivateContent() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-2">
+                    <label
+                      htmlFor="username"
+                      className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-2"
+                    >
                       Pilih Username Tautan Publik
                     </label>
-                    <div className={`flex items-center rounded-xl border px-4 focus-within:border-sky-500 transition ${
-                      isDark ? "bg-slate-900/60 border-white/15" : "bg-slate-50 border-slate-300"
-                    }`}>
+                    <div
+                      className={`flex items-center rounded-xl border px-4 focus-within:border-sky-500 transition ${
+                        isDark ? "bg-slate-900/60 border-white/15" : "bg-slate-50 border-slate-300"
+                      }`}
+                    >
                       <span className="text-xs font-semibold text-slate-400 select-none">
                         cardi.co.id/
                       </span>
                       <input
                         type="text"
+                        id="username"
+                        name="username"
                         value={username}
-                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
-                        placeholder="namabrand"
+                        onChange={(e) =>
+                          setUsername(
+                            e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "")
+                          )
+                        }
+                        placeholder="contoh: deo"
                         className="w-full bg-transparent py-3 text-sm text-slate-900 dark:text-white focus:outline-none placeholder-slate-400 font-semibold"
                         required
                       />
@@ -403,9 +541,8 @@ function ActivateContent() {
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="Contoh: Hendra Pratama"
-                        className={`w-full border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 transition ${
-                          isDark ? "bg-slate-900/60 border-white/15" : "bg-slate-50 border-slate-300"
-                        }`}
+                        className={`w-full border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 transition ${isDark ? "bg-slate-900/60 border-white/15" : "bg-slate-50 border-slate-300"
+                          }`}
                         required
                       />
                     </div>
@@ -419,9 +556,8 @@ function ActivateContent() {
                         value={headline}
                         onChange={(e) => setHeadline(e.target.value)}
                         placeholder="Contoh: Chief Executive Officer"
-                        className={`w-full border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 transition ${
-                          isDark ? "bg-slate-900/60 border-white/15" : "bg-slate-50 border-slate-300"
-                        }`}
+                        className={`w-full border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 transition ${isDark ? "bg-slate-900/60 border-white/15" : "bg-slate-50 border-slate-300"
+                          }`}
                       />
                     </div>
                   </div>
@@ -436,9 +572,8 @@ function ActivateContent() {
                         value={company}
                         onChange={(e) => setCompany(e.target.value)}
                         placeholder="PT Maju Bersama AI"
-                        className={`w-full border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 transition ${
-                          isDark ? "bg-slate-900/60 border-white/15" : "bg-slate-50 border-slate-300"
-                        }`}
+                        className={`w-full border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 transition ${isDark ? "bg-slate-900/60 border-white/15" : "bg-slate-50 border-slate-300"
+                          }`}
                       />
                     </div>
 
@@ -451,9 +586,8 @@ function ActivateContent() {
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="+62 812-3456-7890"
-                        className={`w-full border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 transition ${
-                          isDark ? "bg-slate-900/60 border-white/15" : "bg-slate-50 border-slate-300"
-                        }`}
+                        className={`w-full border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 transition ${isDark ? "bg-slate-900/60 border-white/15" : "bg-slate-50 border-slate-300"
+                          }`}
                       />
                     </div>
                   </div>
@@ -467,9 +601,8 @@ function ActivateContent() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="hendra@perusahaan.com"
-                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 transition ${
-                        isDark ? "bg-slate-900/60 border-white/15" : "bg-slate-50 border-slate-300"
-                      }`}
+                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 transition ${isDark ? "bg-slate-900/60 border-white/15" : "bg-slate-50 border-slate-300"
+                        }`}
                     />
                   </div>
 
@@ -477,9 +610,8 @@ function ActivateContent() {
                     <button
                       type="button"
                       onClick={() => setStep(1)}
-                      className={`w-1/3 py-3 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                        isDark ? "bg-white/5 border-white/10 hover:bg-white/10 text-white" : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"
-                      }`}
+                      className={`w-1/3 py-3 rounded-xl text-xs font-semibold border transition cursor-pointer ${isDark ? "bg-white/5 border-white/10 hover:bg-white/10 text-white" : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"
+                        }`}
                     >
                       Kembali
                     </button>
@@ -512,13 +644,12 @@ function ActivateContent() {
                     <button
                       type="button"
                       onClick={() => setCardDesign("black-gold")}
-                      className={`p-3.5 rounded-2xl border text-center transition cursor-pointer ${
-                        cardDesign === "black-gold"
+                      className={`p-3.5 rounded-2xl border text-center transition cursor-pointer ${cardDesign === "black-gold"
                           ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/30"
                           : isDark
-                          ? "border-white/10 bg-white/5 hover:border-white/20"
-                          : "border-slate-200 bg-slate-50 hover:border-slate-300"
-                      }`}
+                            ? "border-white/10 bg-white/5 hover:border-white/20"
+                            : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                        }`}
                     >
                       <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#050505] to-[#252525] border border-amber-400/50 mx-auto mb-2 flex items-center justify-center">
                         <Sparkles className="w-4 h-4 text-amber-400" />
@@ -530,13 +661,12 @@ function ActivateContent() {
                     <button
                       type="button"
                       onClick={() => setCardDesign("royal-blue")}
-                      className={`p-3.5 rounded-2xl border text-center transition cursor-pointer ${
-                        cardDesign === "royal-blue"
+                      className={`p-3.5 rounded-2xl border text-center transition cursor-pointer ${cardDesign === "royal-blue"
                           ? "border-sky-500 bg-sky-500/10 ring-2 ring-sky-500/30"
                           : isDark
-                          ? "border-white/10 bg-white/5 hover:border-white/20"
-                          : "border-slate-200 bg-slate-50 hover:border-slate-300"
-                      }`}
+                            ? "border-white/10 bg-white/5 hover:border-white/20"
+                            : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                        }`}
                     >
                       <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#0258A4] to-[#1E4FFF] border border-cyan-400/50 mx-auto mb-2 flex items-center justify-center">
                         <Zap className="w-4 h-4 text-cyan-300" />
@@ -548,13 +678,12 @@ function ActivateContent() {
                     <button
                       type="button"
                       onClick={() => setCardDesign("silver-minimal")}
-                      className={`p-3.5 rounded-2xl border text-center transition cursor-pointer ${
-                        cardDesign === "silver-minimal"
+                      className={`p-3.5 rounded-2xl border text-center transition cursor-pointer ${cardDesign === "silver-minimal"
                           ? "border-slate-500 bg-slate-500/10 ring-2 ring-slate-400/30"
                           : isDark
-                          ? "border-white/10 bg-white/5 hover:border-white/20"
-                          : "border-slate-200 bg-slate-50 hover:border-slate-300"
-                      }`}
+                            ? "border-white/10 bg-white/5 hover:border-white/20"
+                            : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                        }`}
                     >
                       <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-600 to-slate-400 border border-slate-300 mx-auto mb-2 flex items-center justify-center">
                         <CreditCard className="w-4 h-4 text-white" />
@@ -573,13 +702,12 @@ function ActivateContent() {
                       <button
                         type="button"
                         onClick={() => setBundleTier("none")}
-                        className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
-                          bundleTier === "none"
+                        className={`p-3 rounded-2xl border text-left transition cursor-pointer ${bundleTier === "none"
                             ? "border-sky-500 bg-sky-500/10 ring-2 ring-sky-500/30"
                             : isDark
-                            ? "border-white/10 bg-white/5"
-                            : "border-slate-200 bg-slate-50"
-                        }`}
+                              ? "border-white/10 bg-white/5"
+                              : "border-slate-200 bg-slate-50"
+                          }`}
                       >
                         <span className="text-[11px] font-bold block text-slate-900 dark:text-white">Kartu Saja</span>
                         <span className="text-[10px] text-slate-500 block">Rp 49.000</span>
@@ -589,13 +717,12 @@ function ActivateContent() {
                       <button
                         type="button"
                         onClick={() => setBundleTier("quick")}
-                        className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
-                          bundleTier === "quick"
+                        className={`p-3 rounded-2xl border text-left transition cursor-pointer ${bundleTier === "quick"
                             ? "border-sky-500 bg-sky-500/10 ring-2 ring-sky-500/30"
                             : isDark
-                            ? "border-white/10 bg-white/5"
-                            : "border-slate-200 bg-slate-50"
-                        }`}
+                              ? "border-white/10 bg-white/5"
+                              : "border-slate-200 bg-slate-50"
+                          }`}
                       >
                         <span className="text-[11px] font-bold block text-slate-900 dark:text-white">Kartu + Quick</span>
                         <span className="text-[10px] text-slate-500 block">Rp 139.000</span>
@@ -605,13 +732,12 @@ function ActivateContent() {
                       <button
                         type="button"
                         onClick={() => setBundleTier("bulk")}
-                        className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
-                          bundleTier === "bulk"
+                        className={`p-3 rounded-2xl border text-left transition cursor-pointer ${bundleTier === "bulk"
                             ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/30"
                             : isDark
-                            ? "border-white/10 bg-white/5"
-                            : "border-slate-200 bg-slate-50"
-                        }`}
+                              ? "border-white/10 bg-white/5"
+                              : "border-slate-200 bg-slate-50"
+                          }`}
                       >
                         <span className="text-[11px] font-bold block text-slate-900 dark:text-white">Kartu + Bulk ⭐</span>
                         <span className="text-[10px] text-slate-500 block">Rp 399.000</span>
@@ -626,9 +752,8 @@ function ActivateContent() {
                     </div>
                   )}
 
-                  <div className={`p-4 rounded-2xl border text-xs space-y-2 ${
-                    isDark ? "bg-white/5 border-white/10" : "bg-slate-50 border-slate-200 text-slate-700"
-                  }`}>
+                  <div className={`p-4 rounded-2xl border text-xs space-y-2 ${isDark ? "bg-white/5 border-white/10" : "bg-slate-50 border-slate-200 text-slate-700"
+                    }`}>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500 dark:text-slate-400">Tautan Publik:</span>
                       <span className="font-mono text-sky-600 dark:text-sky-400 font-bold">cardi.co.id/{username}</span>
@@ -649,8 +774,8 @@ function ActivateContent() {
                           {bundleTier === "bulk"
                             ? "2.500 Koin MoM AI (Hemat 50rb)"
                             : bundleTier === "quick"
-                            ? "500 Koin MoM AI"
-                            : "Tanpa Kuota Tambahan"}
+                              ? "500 Koin MoM AI"
+                              : "Tanpa Kuota Tambahan"}
                         </span>
                       </span>
                     </div>
@@ -660,9 +785,8 @@ function ActivateContent() {
                     <button
                       type="button"
                       onClick={() => setStep(2)}
-                      className={`w-1/3 py-3 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                        isDark ? "bg-white/5 border-white/10 hover:bg-white/10 text-white" : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"
-                      }`}
+                      className={`w-1/3 py-3 rounded-xl text-xs font-semibold border transition cursor-pointer ${isDark ? "bg-white/5 border-white/10 hover:bg-white/10 text-white" : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"
+                        }`}
                     >
                       Kembali
                     </button>
@@ -703,8 +827,8 @@ function ActivateContent() {
                     cardDesign === "black-gold"
                       ? "linear-gradient(135deg, #131722 0%, #090c13 50%, #030407 100%)"
                       : cardDesign === "royal-blue"
-                      ? "linear-gradient(135deg, #03396c 0%, #011f4b 50%, #00122e 100%)"
-                      : "linear-gradient(135deg, #272e3f 0%, #171d2b 50%, #0e121b 100%)",
+                        ? "linear-gradient(135deg, #03396c 0%, #011f4b 50%, #00122e 100%)"
+                        : "linear-gradient(135deg, #272e3f 0%, #171d2b 50%, #0e121b 100%)",
                 }}
               >
                 {/* Metallic Sheen Effect */}
@@ -754,9 +878,8 @@ function ActivateContent() {
               </div>
 
               {/* Commercial Value Proposition Box */}
-              <div className={`mt-6 w-full max-w-[340px] border rounded-2xl p-4 text-xs space-y-2 ${
-                isDark ? "bg-[#0E1A30] border-white/10 text-slate-300" : "bg-white border-slate-200 text-slate-700 shadow-xs"
-              }`}>
+              <div className={`mt-6 w-full max-w-[340px] border rounded-2xl p-4 text-xs space-y-2 ${isDark ? "bg-[#0E1A30] border-white/10 text-slate-300" : "bg-white border-slate-200 text-slate-700 shadow-xs"
+                }`}>
                 <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
                   <Smartphone className="w-4 h-4 text-sky-600" />
                   <span>Teknologi Smart Card Tanpa App</span>

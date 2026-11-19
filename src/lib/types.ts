@@ -138,8 +138,10 @@ export interface CardProfile {
   bio: string;
   avatarUrl?: string;
   cardDesign: "black-gold" | "royal-blue" | "silver-minimal";
-  isActivated?: boolean;
   tagId?: string;
+  isActivated?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
   socials: {
     whatsapp?: string;
     linkedin?: string;
@@ -149,8 +151,6 @@ export interface CardProfile {
     tiktok?: string;
     youtube?: string;
     telegram?: string;
-    facebook?: string;
-    threads?: string;
     [key: string]: string | undefined;
   };
   metrics: {
@@ -158,8 +158,6 @@ export interface CardProfile {
     contactsSaved: number;
     momInitiated: number;
   };
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 // Contact / Lead Entity

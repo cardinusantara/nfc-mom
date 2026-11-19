@@ -11,11 +11,10 @@ export default function EcosystemBar() {
 
   return (
     <div
-      className={`w-full text-[11px] font-medium border-b transition-colors select-none ${
-        isDark
+      className={`w-full text-[11px] font-medium border-b transition-colors select-none ${isDark
           ? "bg-[#050B1B] border-white/10 text-slate-400"
           : "bg-[#0A1633] border-slate-800 text-slate-300"
-      }`}
+        }`}
     >
       <div className="max-w-6xl mx-auto px-4 py-1.5 flex items-center justify-between gap-4 font-mono">
         {/* Left: Ecosystem Label */}

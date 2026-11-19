@@ -1,24 +1,25 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import Link from "next/link";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Mic,
   Square,
   Sparkles,
   Loader2,
   CheckCircle,
+  FileText,
+  Clock,
+  Calendar,
+  User,
   X,
   Volume2,
   Play,
   Pause,
-  Smartphone,
+  ExternalLink,
+  Share2,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { Meeting } from "@/lib/types";
-import { cardiApi } from "@/lib/api";
-import { launchMobileHandOff, uploadAudioDirectToS3 } from "@/lib/handoff";
-import AppDownloadModal from "@/components/AppDownloadModal";
 
 interface AudioRecordModalProps {
   isOpen: boolean;
@@ -37,15 +38,16 @@ export default function AudioRecordModal({
 
   const [title, setTitle] = useState(
     defaultTitle ||
-      (defaultAttendee
-        ? `Rapat dengan ${defaultAttendee}`
-        : "Rapat Diskusi Bisnis & Kemitraan")
+    (defaultAttendee
+      ? `Rapat dengan ${defaultAttendee}`
+      : "Rapat Diskusi Bisnis & Kemitraan")
   );
   const [attendees, setAttendees] = useState(
-    defaultAttendee || `${cardProfile.fullName || "Saya"}, Rekan Bisnis`
+    defaultAttendee || `${cardProfile.fullName || "Deo Cardi Nathanael"}, Rekan Bisnis`
   );
 
   // Audio recording states
+  const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -57,7 +59,6 @@ export default function AudioRecordModal({
   const [step, setStep] = useState<"idle" | "recording" | "processing" | "done">("idle");
   const [createdMeeting, setCreatedMeeting] = useState<Meeting | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showDownloadModal, setShowDownloadModal] = useState(false);
 
   // Refs for media stream & timer
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -68,31 +69,29 @@ export default function AudioRecordModal({
   const animationFrameRef = useRef<number | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
-  const [prevDefaultAttendee, setPrevDefaultAttendee] = useState(defaultAttendee);
-  if (defaultAttendee !== prevDefaultAttendee) {
-    setPrevDefaultAttendee(defaultAttendee);
+  useEffect(() => {
     if (defaultAttendee) {
-      setAttendees(`${cardProfile.fullName || "Saya"}, ${defaultAttendee}`);
+      setAttendees(`${cardProfile.fullName || "Deo Cardi Nathanael"}, ${defaultAttendee}`);
       setTitle(`Rapat dengan ${defaultAttendee}`);
     }
-  }
-
-  const stopRecordingResources = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-      audioContextRef.current.close().catch(() => {});
-    }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
-    }
-  }, []);
+  }, [defaultAttendee, cardProfile.fullName]);
 
   useEffect(() => {
     return () => {
       stopRecordingResources();
     };
-  }, [stopRecordingResources]);
+  }, []);
+
+  const stopRecordingResources = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+      audioContextRef.current.close().catch(() => { });
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -152,6 +151,7 @@ export default function AudioRecordModal({
       };
 
       recorder.start(250);
+      setIsRecording(true);
       setStep("recording");
       setDuration(0);
 
@@ -170,18 +170,18 @@ export default function AudioRecordModal({
   // 2. Stop recording and execute AI processing pipeline
   const handleStopAndProcess = async () => {
     stopRecordingResources();
+    setIsRecording(false);
     setStep("processing");
 
     let finalAudioUrl: string | null = null;
-    let recordedBlob: Blob | null = null;
     if (audioChunksRef.current.length > 0) {
-      recordedBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-      finalAudioUrl = URL.createObjectURL(recordedBlob);
+      const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      finalAudioUrl = URL.createObjectURL(blob);
       setAudioUrl(finalAudioUrl);
     }
 
     try {
-      // Step A: Call production endpoint /api/mom/record to initialize meeting and MoM
+      // Call production endpoint /api/mom/record
       const res = await fetch("/api/mom/record", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -196,29 +196,8 @@ export default function AudioRecordModal({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal memproses rapat");
 
-      const meetingId = data.meeting?.id || `mtg_${Date.now()}`;
-
-      // Step B: Direct S3 Presigned Upload (0 bytes through Next.js server)
-      if (recordedBlob && recordedBlob.size > 0) {
-        try {
-          if (sessionToken) {
-            cardiApi.setToken(sessionToken);
-          }
-          const { uploadUrl, key } = await cardiApi.getUploadPresignedUrl(meetingId, "webm");
-          await uploadAudioDirectToS3(uploadUrl, recordedBlob, "audio/webm");
-          await cardiApi.confirmUploadComplete(meetingId, {
-            key,
-            durationMs: duration * 1000,
-            sizeBytes: recordedBlob.size,
-          });
-        } catch (uploadErr) {
-          console.warn("[AudioRecordModal] S3 direct upload notice:", uploadErr);
-        }
-      }
-
       const meetingWithAudio: Meeting = {
         ...data.meeting,
-        id: meetingId,
         audioUrl: finalAudioUrl,
       };
 
@@ -256,7 +235,7 @@ export default function AudioRecordModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-[#0D1829] border border-white/15 w-full max-w-lg rounded-3xl p-6 sm:p-7 shadow-2xl relative text-white animate-in zoom-in-95 duration-200">
-        
+
         {/* Close Button */}
         <button
           onClick={() => {
@@ -315,7 +294,7 @@ export default function AudioRecordModal({
                 type="text"
                 value={attendees}
                 onChange={(e) => setAttendees(e.target.value)}
-                placeholder="Nama Anda, Rekan / Klien"
+                placeholder="Deo Cardi Nathanael, Budi"
                 className="w-full bg-[#070F1E] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition"
               />
             </div>
@@ -480,35 +459,6 @@ export default function AudioRecordModal({
               )}
             </div>
 
-            {/* Mobile Hand-off Action Trigger */}
-            <div className="space-y-2 pt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  if (createdMeeting) {
-                    launchMobileHandOff({
-                      meetingId: createdMeeting.id,
-                      title: createdMeeting.title,
-                      onAppNotInstalled: () => setShowDownloadModal(true),
-                      source: "web_record_modal",
-                    });
-                  }
-                }}
-                className="w-full bg-gradient-to-r from-[#1E4FFF] to-[#00C2D1] hover:from-[#183ec9] hover:to-[#00a8b5] text-white py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition cursor-pointer"
-              >
-                <Smartphone className="w-4 h-4" />
-                <span>Buka di Aplikasi Mobile Cardi MoM</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowDownloadModal(true)}
-                className="w-full text-center text-[11px] text-slate-400 hover:text-white transition py-1"
-              >
-                Belum punya aplikasi mobile? <span className="text-[#00C2D1] underline font-medium">Unduh di sini</span>
-              </button>
-            </div>
-
             <div className="flex items-center gap-2 pt-2">
               <button
                 onClick={onClose}
@@ -516,24 +466,17 @@ export default function AudioRecordModal({
               >
                 Tutup
               </button>
-              <Link
+              <a
                 href="/dashboard/mom"
                 className="flex-1 bg-gradient-to-r from-sky-500 to-cyan-400 hover:from-sky-600 hover:to-cyan-500 text-slate-900 py-2.5 px-4 rounded-xl text-xs font-bold text-center transition shadow-lg shadow-sky-500/20"
               >
                 Lihat di Dashboard MoM
-              </Link>
+              </a>
             </div>
           </div>
         )}
 
       </div>
-
-      <AppDownloadModal
-        isOpen={showDownloadModal}
-        onClose={() => setShowDownloadModal(false)}
-        meetingId={createdMeeting?.id}
-        title={createdMeeting?.title}
-      />
     </div>
   );
 }

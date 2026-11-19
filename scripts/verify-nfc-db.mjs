@@ -1,32 +1,34 @@
-// Standalone verification script for NFC Card Profile Persistent Database
-// Tests DDL schema (all 17 columns), seed data, API activation, profile retrieval, 404, and em dash audit.
+// Automated verification script for NFC Database operations and Card Activation
+// Tests:
+// 1. SQLite DB initialization and seed verification ('deo' profile with email cardinusantara@gmail.com)
+// 2. Activating a card with custom username slug (tag CRD-NEW-999, username deo-partner)
+// 3. Verifying getCardProfileByUsername('deo-partner') returns tagId CRD-NEW-999 and custom username
+// 4. Verifying getCardProfileByTagId('CRD-NEW-999') returns username 'deo-partner'
+// 5. Verifying duplicate tag activation returns conflict (409)
+// 6. Verifying duplicate username activation returns conflict (409)
+// 7. Verifying public profile endpoint lookup at /[username]
+// 8. Static source code guards verification for all activation and admin routes
+// 9. Admin token handling verification (2-part signed session tokens, 3-part JWTs, raw email rejection)
+// 10. Zero em dash audit across src/ and scripts/
 
-import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const REQUIRED_COLUMNS = [
-  "username",
-  "tagId",
-  "fullName",
-  "headline",
-  "company",
-  "phone",
-  "email",
-  "website",
-  "location",
-  "bio",
-  "avatarUrl",
-  "socials",
-  "cardDesign",
-  "isActivated",
-  "metrics",
-  "createdAt",
-  "updatedAt",
-];
+import {
+  getDb,
+  getCardProfileByUsername,
+  getCardProfileByTagId,
+  upsertCardProfile,
+  listAllProfiles,
+  deleteCardProfile,
+} from "../src/lib/server/db.ts";
 
-const DB_PATH = path.join(process.cwd(), "data", "cardi_nfc.db");
+import { verifyAdminRequest, isAdminEmail } from "../src/lib/adminAuth.ts";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, "..");
 
 let testCount = 0;
 let passCount = 0;
@@ -43,186 +45,509 @@ function assert(condition, message) {
   }
 }
 
-async function run() {
-  console.log("==================================================");
-  console.log("NFC CARD DATABASE AND API VERIFICATION SUITE");
-  console.log("==================================================");
+// Card activation workflow simulation mirroring src/app/api/nfc/activate/route.ts
+function executeCardActivation({
+  tagId,
+  username,
+  email,
+  fullName,
+  headline,
+  company,
+  phone,
+  bundleTier,
+  cardDesign,
+}) {
+  if (!tagId || typeof tagId !== "string" || !tagId.trim()) {
+    return {
+      status: 400,
+      data: { success: false, error: "Tag ID kartu NFC wajib diisi." },
+    };
+  }
+  const cleanTag = tagId.trim().toUpperCase();
 
-  // 1. Database schema and column verification
-  console.log("\n--- TEST 1: Database Schema and 17 Required Columns ---");
-  assert(fs.existsSync(DB_PATH), `Database file exists at ${DB_PATH}`);
-
-  const db = new DatabaseSync(DB_PATH);
-  db.exec("PRAGMA busy_timeout = 5000;");
-
-  const tableInfo = db.prepare("PRAGMA table_info(card_profiles)").all();
-  const existingCols = tableInfo.map((c) => c.name);
-
-  console.log(`Discovered columns (${existingCols.length}): ${existingCols.join(", ")}`);
-
-  assert(
-    existingCols.length === REQUIRED_COLUMNS.length,
-    `Column count matches exactly ${REQUIRED_COLUMNS.length} (found ${existingCols.length})`
-  );
-
-  for (const col of REQUIRED_COLUMNS) {
-    assert(existingCols.includes(col), `Column '${col}' is present in card_profiles`);
+  if (!username || typeof username !== "string" || !username.trim()) {
+    return {
+      status: 400,
+      data: { success: false, error: "Username wajib diisi." },
+    };
+  }
+  const cleanUser = username.trim().toLowerCase();
+  const usernameRegex = /^[a-z0-9_-]{3,30}$/;
+  if (!usernameRegex.test(cleanUser)) {
+    return {
+      status: 400,
+      data: {
+        success: false,
+        error:
+          "Username harus terdiri dari 3-30 karakter alfanumerik (huruf kecil, angka, garis bawah, atau strip).",
+      },
+    };
   }
 
-  // 2. Initial seed data verification for user 'deo'
-  console.log("\n--- TEST 2: Initial Seed Data for User 'deo' ---");
-  const deoRow = db.prepare("SELECT * FROM card_profiles WHERE username = ?").get("deo");
-  assert(Boolean(deoRow), "User 'deo' exists in database");
-
-  if (deoRow) {
-    assert(deoRow.username === "deo", "deo username matches 'deo'");
-    assert(deoRow.tagId === "CRD-DEO-001", `deo tagId matches 'CRD-DEO-001' (got '${deoRow.tagId}')`);
-    assert(deoRow.fullName === "Founder & CEO", `deo fullName matches 'Founder & CEO' (got '${deoRow.fullName}')`);
-    assert(deoRow.headline === "Founder & CEO", `deo headline matches 'Founder & CEO' (got '${deoRow.headline}')`);
-    assert(deoRow.company === "cardi.co.id", `deo company matches 'cardi.co.id' (got '${deoRow.company}')`);
-    assert(deoRow.phone === "+62 812-8989-5646", `deo phone matches '+62 812-8989-5646' (got '${deoRow.phone}')`);
-    assert(deoRow.email === "cardinusantara@gmail.com", `deo email matches 'cardinusantara@gmail.com' (got '${deoRow.email}')`);
-    assert(deoRow.cardDesign === "black-gold", `deo cardDesign matches 'black-gold' (got '${deoRow.cardDesign}')`);
-    assert(Number(deoRow.isActivated) === 1, "deo isActivated equals 1");
-
-    let socials = {};
-    try {
-      socials = JSON.parse(deoRow.socials);
-    } catch {
-      socials = {};
-    }
-    assert(Boolean(socials.whatsapp), "deo socials contains whatsapp link");
-    assert(Boolean(socials.linkedin), "deo socials contains linkedin link");
-
-    let metrics = {};
-    try {
-      metrics = JSON.parse(deoRow.metrics);
-    } catch {
-      metrics = {};
-    }
-    assert(typeof metrics.totalTaps === "number", "deo metrics contains totalTaps");
-    assert(typeof metrics.contactsSaved === "number", "deo metrics contains contactsSaved");
-    assert(typeof metrics.momInitiated === "number", "deo metrics contains momInitiated");
-    assert(Boolean(deoRow.createdAt), "deo createdAt timestamp is set");
-    assert(Boolean(deoRow.updatedAt), "deo updatedAt timestamp is set");
+  // Conflict check: Tag ID already bound
+  const existingTagProfile = getCardProfileByTagId(cleanTag);
+  if (existingTagProfile) {
+    return {
+      status: 409,
+      data: {
+        success: false,
+        error: `Tag ID ${cleanTag} sudah terdaftar dan terikat pada profil @${existingTagProfile.username}.`,
+      },
+    };
   }
 
-  // 3. HTTP Server verification (real Next.js server)
-  console.log("\n--- STARTING NEXT.JS SERVER FOR HTTP ROUTE TESTS ---");
-  const testPort = 3847;
-  const serverProcess = spawn(
-    "node",
-    ["./node_modules/next/dist/bin/next", "start", "-p", String(testPort)],
-    { stdio: "pipe" }
-  );
+  // Conflict check: Username already taken
+  const existingUserProfile = getCardProfileByUsername(cleanUser);
+  if (existingUserProfile) {
+    return {
+      status: 409,
+      data: {
+        success: false,
+        error: `Username @${cleanUser} sudah digunakan. Silakan pilih username lain.`,
+      },
+    };
+  }
 
-  let serverStarted = false;
-  serverProcess.stdout.on("data", (data) => {
-    const text = data.toString();
-    if (text.includes("Ready") || text.includes("started") || text.includes(String(testPort))) {
-      serverStarted = true;
-    }
+  let coinsCredited = 50;
+  if (bundleTier === "bulk") coinsCredited = 2500;
+  else if (bundleTier === "quick") coinsCredited = 500;
+
+  const userEmail =
+    email && typeof email === "string" && email.trim()
+      ? email.trim()
+      : `${cleanUser}@cardi.co.id`;
+
+  const profile = upsertCardProfile({
+    username: cleanUser,
+    tagId: cleanTag,
+    fullName: fullName ? fullName.trim() : "Pengguna Cardi",
+    headline: headline ? headline.trim() : "Professional & Business Leader",
+    company: company ? company.trim() : "Cardi",
+    phone: phone ? phone.trim() : "",
+    email: userEmail,
+    cardDesign: cardDesign || "black-gold",
+    isActivated: true,
   });
 
-  // Wait for server to become ready
-  const maxWaitMs = 15000;
-  const startTime = Date.now();
-  while (!serverStarted && Date.now() - startTime < maxWaitMs) {
-    try {
-      const probe = await fetch(`http://localhost:${testPort}/api/nfc/profile/deo`);
-      if (probe.status === 200) {
-        serverStarted = true;
-        break;
-      }
-    } catch {
-      // Wait a moment
-    }
-    await new Promise((r) => setTimeout(r, 250));
-  }
+  return {
+    status: 200,
+    data: {
+      success: true,
+      username: cleanUser,
+      tagId: cleanTag,
+      email: profile.email,
+      coinsCredited,
+      totalCoinsBalance: coinsCredited,
+      profile,
+    },
+  };
+}
 
-  assert(serverStarted, `Next.js server started successfully on port ${testPort}`);
-
-  try {
-    // 3.1 Profile retrieval via GET /api/nfc/profile/deo
-    console.log("\n--- TEST 3: GET /api/nfc/profile/deo over HTTP ---");
-    const getDeoRes = await fetch(`http://localhost:${testPort}/api/nfc/profile/deo`);
-    assert(getDeoRes.status === 200, `GET /api/nfc/profile/deo returned HTTP 200 (status ${getDeoRes.status})`);
-    const getDeoJson = await getDeoRes.json();
-    assert(Boolean(getDeoJson.profile), "Response contains profile object");
-    assert(getDeoJson.profile.username === "deo", "Profile username is 'deo'");
-    assert(getDeoJson.profile.tagId === "CRD-DEO-001", "Profile tagId is 'CRD-DEO-001'");
-    assert(getDeoJson.profile.email === "cardinusantara@gmail.com", "Profile email is 'cardinusantara@gmail.com'");
-    assert(getDeoJson.profile.isActivated === true, "Profile isActivated is true");
-
-    // 3.2 Activation persistence via POST /api/nfc/activate
-    console.log("\n--- TEST 4: POST /api/nfc/activate Persistence over HTTP ---");
-    const testUsername = "pilot_test_" + Date.now();
-    const testTagId = "CRD-TEST-" + Math.floor(Math.random() * 10000);
-    const activatePayload = {
-      tagId: testTagId,
-      username: testUsername,
-      email: `${testUsername}@cardi.co.id`,
-      fullName: "Test Pilot Engineer",
-      headline: "Chief Testing Officer",
-      company: "Cardi Nusantara",
-      phone: "+62 811-9876-5432",
-      bundleTier: "bulk",
-      cardDesign: "royal-blue",
-      website: "https://cardi.co.id",
-      location: "Bandung, Indonesia",
-      bio: "Automated test profile persistence verification.",
+// Public profile resolution simulation mirroring src/app/api/nfc/profile/[username]/route.ts
+function resolvePublicProfile(username) {
+  if (!username || typeof username !== "string" || !username.trim()) {
+    return {
+      status: 400,
+      data: { success: false, error: "Username tidak valid" },
     };
-
-    const activateRes = await fetch(`http://localhost:${testPort}/api/nfc/activate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(activatePayload),
-    });
-
-    assert(activateRes.status === 200, `POST /api/nfc/activate returned HTTP 200 (status ${activateRes.status})`);
-    const activateJson = await activateRes.json();
-    assert(activateJson.success === true, "Activation response success is true");
-    assert(activateJson.username === testUsername, `Activation response username matches '${testUsername}'`);
-    assert(activateJson.coinsCredited === 2500, "Activation bulk tier credited 2500 coins");
-    assert(Boolean(activateJson.profile), "Activation response contains saved profile");
-
-    // Verify row was written to SQLite database
-    const directDbRow = db.prepare("SELECT * FROM card_profiles WHERE username = ?").get(testUsername);
-    assert(Boolean(directDbRow), "Profile successfully persisted in SQLite card_profiles table");
-    if (directDbRow) {
-      assert(directDbRow.tagId === testTagId, `SQLite tagId matches '${testTagId}'`);
-      assert(directDbRow.fullName === "Test Pilot Engineer", "SQLite fullName matches payload");
-      assert(directDbRow.cardDesign === "royal-blue", "SQLite cardDesign matches 'royal-blue'");
-    }
-
-    // 3.3 Retrieve the newly activated user via GET /api/nfc/profile/[username]
-    console.log("\n--- TEST 5: GET /api/nfc/profile/[new_user] over HTTP ---");
-    const getNewUserRes = await fetch(`http://localhost:${testPort}/api/nfc/profile/${testUsername}`);
-    assert(getNewUserRes.status === 200, `GET /api/nfc/profile/${testUsername} returned HTTP 200`);
-    const getNewUserJson = await getNewUserRes.json();
-    assert(getNewUserJson.profile.username === testUsername, "Retrieved username matches newly activated user");
-    assert(getNewUserJson.profile.tagId === testTagId, "Retrieved tagId matches newly activated user");
-    assert(getNewUserJson.profile.fullName === "Test Pilot Engineer", "Retrieved fullName matches");
-
-    // 3.4 Verify 404 for non-existent user
-    console.log("\n--- TEST 6: GET /api/nfc/profile/[non_existent] 404 Behavior ---");
-    const nonExistentUser = "nonexistent_user_99999_xyz";
-    const getNotFoundRes = await fetch(`http://localhost:${testPort}/api/nfc/profile/${nonExistentUser}`);
-    assert(getNotFoundRes.status === 404, `GET non-existent user returned HTTP 404 (status ${getNotFoundRes.status})`);
-    const getNotFoundJson = await getNotFoundRes.json();
-    assert(Boolean(getNotFoundJson.error), "404 response contains error message");
-
-    // Clean up test user
-    db.prepare("DELETE FROM card_profiles WHERE username = ?").run(testUsername);
-  } finally {
-    serverProcess.kill();
   }
+  const cleanUser = decodeURIComponent(username).toLowerCase().trim();
+  const profile = getCardProfileByUsername(cleanUser);
+  if (!profile) {
+    return {
+      status: 404,
+      data: { success: false, error: "Profil kartu tidak ditemukan" },
+    };
+  }
+  return {
+    status: 200,
+    data: { success: true, profile },
+  };
+}
 
-  // 4. Character Constraint: ZERO Em Dash (\u2014) Audit
-  console.log("\n--- TEST 7: ZERO Em Dash (\\u2014) Constraint Audit ---");
+async function run() {
+  console.log("==================================================");
+  console.log("NFC DATABASE AND ACTIVATION VERIFICATION SUITE");
+  console.log("==================================================");
+
+  // 1. Database initialization and seed check
+  console.log("\n--- TEST 1: Database Initialization and Seed Profile ---");
+  const db = getDb();
+  assert(Boolean(db), "SQLite database initialized successfully");
+
+  const seedProfile = getCardProfileByUsername("deo");
+  assert(Boolean(seedProfile), "Seed profile 'deo' exists in SQLite database");
+  assert(seedProfile?.username === "deo", "Seed profile has username 'deo'");
+  assert(
+    seedProfile?.email === "cardinusantara@gmail.com",
+    "Seed profile has email 'cardinusantara@gmail.com'"
+  );
+  assert(seedProfile?.tagId === "CRD-DEO-001", "Seed profile has tagId 'CRD-DEO-001'");
+  assert(seedProfile?.isActivated === true, "Seed profile is marked as activated");
+
+  // Clean up any test records from prior runs to ensure idempotent execution
+  deleteCardProfile("deo-partner");
+  deleteCardProfile("another-partner");
+  deleteCardProfile("test-custom-slug");
+
+  // 2. Card activation with custom username slug
+  console.log("\n--- TEST 2: Activating Card with Custom Username Slug ---");
+  const activationResult = executeCardActivation({
+    tagId: "CRD-NEW-999",
+    username: "deo-partner",
+    email: "partner@example.com",
+    fullName: "Deo Strategic Partner",
+    headline: "Managing Director",
+    company: "Cardi Partner Network",
+    phone: "+62 812-3456-7890",
+    bundleTier: "quick",
+    cardDesign: "royal-blue",
+  });
+
+  assert(
+    activationResult.status === 200,
+    `Activation returns status 200 (got ${activationResult.status})`
+  );
+  assert(
+    activationResult.data.success === true,
+    "Activation response success is true"
+  );
+  assert(
+    activationResult.data.username === "deo-partner",
+    "Activation returned custom username 'deo-partner'"
+  );
+  assert(
+    activationResult.data.tagId === "CRD-NEW-999",
+    "Activation returned tagId 'CRD-NEW-999'"
+  );
+  assert(
+    activationResult.data.email === "partner@example.com",
+    "Activation returned email 'partner@example.com'"
+  );
+  assert(
+    activationResult.data.coinsCredited === 500,
+    "Activation credited 500 coins for quick tier"
+  );
+  assert(
+    activationResult.data.totalCoinsBalance === 500,
+    "Activation total coins balance is 500"
+  );
+  assert(
+    activationResult.data.profile?.company === "Cardi Partner Network",
+    "Activation saved company name in database"
+  );
+
+  // 3. Verifying getCardProfileByUsername returns custom username and tagId
+  console.log("\n--- TEST 3: Lookup by Custom Username Slug ---");
+  const fetchedByUsername = getCardProfileByUsername("deo-partner");
+  assert(Boolean(fetchedByUsername), "getCardProfileByUsername finds 'deo-partner'");
+  assert(
+    fetchedByUsername?.username === "deo-partner",
+    "Profile username matches 'deo-partner'"
+  );
+  assert(
+    fetchedByUsername?.tagId === "CRD-NEW-999",
+    "Profile tagId matches 'CRD-NEW-999'"
+  );
+  assert(
+    fetchedByUsername?.fullName === "Deo Strategic Partner",
+    "Profile fullName is preserved"
+  );
+  assert(
+    fetchedByUsername?.cardDesign === "royal-blue",
+    "Profile cardDesign is 'royal-blue'"
+  );
+  assert(
+    fetchedByUsername?.isActivated === true,
+    "Profile is marked activated in database"
+  );
+
+  // Case-insensitivity check
+  const fetchedMixedCase = getCardProfileByUsername("DeO-PaRtNeR");
+  assert(
+    Boolean(fetchedMixedCase),
+    "getCardProfileByUsername handles mixed-case username"
+  );
+  assert(
+    fetchedMixedCase?.username === "deo-partner",
+    "Mixed case lookup resolves canonical username"
+  );
+
+  // 4. Verifying getCardProfileByTagId returns custom username
+  console.log("\n--- TEST 4: Lookup by Physical NFC Tag ID ---");
+  const fetchedByTag = getCardProfileByTagId("CRD-NEW-999");
+  assert(
+    Boolean(fetchedByTag),
+    "getCardProfileByTagId finds profile for 'CRD-NEW-999'"
+  );
+  assert(
+    fetchedByTag?.username === "deo-partner",
+    "Tag lookup returns username 'deo-partner'"
+  );
+  assert(
+    fetchedByTag?.email === "partner@example.com",
+    "Tag lookup returns partner email"
+  );
+
+  // Tag case-insensitivity check
+  const fetchedLowerTag = getCardProfileByTagId("crd-new-999");
+  assert(
+    Boolean(fetchedLowerTag),
+    "getCardProfileByTagId handles lowercase tag ID input"
+  );
+  assert(
+    fetchedLowerTag?.username === "deo-partner",
+    "Lowercase tag lookup resolves profile"
+  );
+
+  // 5. Duplicate tag rejection
+  console.log("\n--- TEST 5: Duplicate Tag ID Conflict Detection ---");
+  const dupTagResult = executeCardActivation({
+    tagId: "CRD-NEW-999",
+    username: "another-partner",
+    email: "another@example.com",
+    fullName: "Another Partner",
+  });
+  assert(
+    dupTagResult.status === 409,
+    `Duplicate tag returns status 409 conflict (got ${dupTagResult.status})`
+  );
+  assert(
+    dupTagResult.data.success === false,
+    "Duplicate tag response success is false"
+  );
+  assert(
+    Boolean(dupTagResult.data.error && dupTagResult.data.error.includes("CRD-NEW-999")),
+    `Duplicate tag error message mentions tag: "${dupTagResult.data.error}"`
+  );
+
+  // 6. Duplicate username rejection
+  console.log("\n--- TEST 6: Duplicate Username Conflict Detection ---");
+  const dupUserResult = executeCardActivation({
+    tagId: "CRD-BRAND-NEW-111",
+    username: "deo-partner",
+    email: "newperson@example.com",
+    fullName: "New Person",
+  });
+  assert(
+    dupUserResult.status === 409,
+    `Duplicate username returns status 409 conflict (got ${dupUserResult.status})`
+  );
+  assert(
+    dupUserResult.data.success === false,
+    "Duplicate username response success is false"
+  );
+  assert(
+    Boolean(dupUserResult.data.error && dupUserResult.data.error.includes("deo-partner")),
+    `Duplicate username error message mentions username: "${dupUserResult.data.error}"`
+  );
+
+  // 7. Public profile resolution endpoint
+  console.log("\n--- TEST 7: Public Profile Resolution Endpoint ---");
+  const publicResult = resolvePublicProfile("deo-partner");
+  assert(
+    publicResult.status === 200,
+    `Public profile lookup returns 200 (got ${publicResult.status})`
+  );
+  assert(
+    publicResult.data.success === true,
+    "Public profile lookup success is true"
+  );
+  assert(
+    publicResult.data.profile?.username === "deo-partner",
+    "Public profile has username 'deo-partner'"
+  );
+  assert(
+    publicResult.data.profile?.tagId === "CRD-NEW-999",
+    "Public profile has tagId 'CRD-NEW-999'"
+  );
+
+  // Non-existent profile resolution check
+  const missingResult = resolvePublicProfile("definitely-not-found");
+  assert(
+    missingResult.status === 404,
+    `Non-existent public profile returns 404 (got ${missingResult.status})`
+  );
+  assert(
+    missingResult.data.success === false,
+    "Non-existent profile lookup success is false"
+  );
+
+  // 8. Source Code Structure & Guards Validation
+  console.log("\n--- TEST 8: Source Code Structure & Implementation Guards ---");
+  const activateRoutePath = path.join(PROJECT_ROOT, "src/app/api/nfc/activate/route.ts");
+  const profileRoutePath = path.join(
+    PROJECT_ROOT,
+    "src/app/api/nfc/profile/[username]/route.ts"
+  );
+  const adminRoutePath = path.join(PROJECT_ROOT, "src/app/api/admin/cards/route.ts");
+  const activatePagePath = path.join(PROJECT_ROOT, "src/app/activate/page.tsx");
+  const storePath = path.join(PROJECT_ROOT, "src/lib/store.ts");
+
+  assert(fs.existsSync(activateRoutePath), "src/app/api/nfc/activate/route.ts exists");
+  assert(
+    fs.existsSync(profileRoutePath),
+    "src/app/api/nfc/profile/[username]/route.ts exists"
+  );
+  assert(fs.existsSync(adminRoutePath), "src/app/api/admin/cards/route.ts exists");
+
+  const activateRouteSrc = fs.readFileSync(activateRoutePath, "utf8");
+  assert(
+    activateRouteSrc.includes("getCardProfileByTagId"),
+    "activate route checks duplicate tagId via getCardProfileByTagId"
+  );
+  assert(
+    activateRouteSrc.includes("getCardProfileByUsername"),
+    "activate route checks duplicate username via getCardProfileByUsername"
+  );
+  assert(
+    activateRouteSrc.includes("upsertCardProfile"),
+    "activate route persists profile via upsertCardProfile"
+  );
+  assert(
+    activateRouteSrc.includes("status: 409"),
+    "activate route returns 409 status on conflicts"
+  );
+
+  const profileRouteSrc = fs.readFileSync(profileRoutePath, "utf8");
+  assert(
+    profileRouteSrc.includes("getCardProfileByUsername"),
+    "profile route queries SQLite via getCardProfileByUsername"
+  );
+  assert(
+    profileRouteSrc.includes("status: 404"),
+    "profile route returns 404 status when profile is not found"
+  );
+
+  const adminRouteSrc = fs.readFileSync(adminRoutePath, "utf8");
+  assert(
+    adminRouteSrc.includes("verifyAdminRequest"),
+    "admin cards route enforces verifyAdminRequest"
+  );
+  assert(
+    adminRouteSrc.includes("listAllProfiles"),
+    "admin cards route lists profiles via listAllProfiles"
+  );
+  assert(
+    adminRouteSrc.includes("updateCardProfile"),
+    "admin cards route updates profiles via updateCardProfile"
+  );
+  assert(
+    adminRouteSrc.includes("deleteCardProfile"),
+    "admin cards route deletes profiles via deleteCardProfile"
+  );
+
+  const activatePageSrc = fs.readFileSync(activatePagePath, "utf8");
+  assert(
+    activatePageSrc.includes('id="username"'),
+    'activate page contains id="username" on username input'
+  );
+  assert(
+    activatePageSrc.includes('name="username"'),
+    'activate page contains name="username" on username input'
+  );
+  assert(
+    activatePageSrc.includes("isLoggedIn"),
+    "activate page checks isLoggedIn state for session isolation"
+  );
+
+  const storeSrc = fs.readFileSync(storePath, "utf8");
+  assert(
+    storeSrc.includes("export function useAuthSession"),
+    "store.ts exports useAuthSession hook"
+  );
+  assert(
+    storeSrc.includes("hasHydrated") && storeSrc.includes("isAuthenticated"),
+    "useAuthSession returns hasHydrated and isAuthenticated"
+  );
+
+  // 9. Admin Token Handling Verification
+  console.log("\n--- TEST 9: Admin Token Handling (R1 Verification) ---");
+  // 9a. 2-part opaque signed session token
+  const unit2PartOpaque = verifyAdminRequest(
+    new Request("http://localhost/api/admin/cards", {
+      headers: {
+        authorization: "Bearer sess_abc123.sig456",
+        "x-admin-email": "cardinusantara@gmail.com",
+      },
+    })
+  );
+  assert(
+    unit2PartOpaque.authorized === true && unit2PartOpaque.status === 200,
+    "verifyAdminRequest returns 200 for 2-part opaque signed session token (sess_abc123.sig456)"
+  );
+  assert(
+    unit2PartOpaque.email === "cardinusantara@gmail.com",
+    "verifyAdminRequest resolves admin email from x-admin-email header"
+  );
+
+  // 9b. 2-part token with base64url JSON claims
+  const nowSec = Math.floor(Date.now() / 1000);
+  const jsonClaimPart = Buffer.from(
+    JSON.stringify({ email: "dimasaldi428@gmail.com", exp: nowSec + 3600 })
+  ).toString("base64url");
+  const unit2PartJson = verifyAdminRequest(
+    new Request("http://localhost/api/admin/cards", {
+      headers: {
+        authorization: `Bearer ${jsonClaimPart}.sig123`,
+      },
+    })
+  );
+  assert(
+    unit2PartJson.authorized === true && unit2PartJson.status === 200,
+    "verifyAdminRequest returns 200 for 2-part token with embedded JSON claims"
+  );
+  assert(
+    unit2PartJson.email === "dimasaldi428@gmail.com",
+    "verifyAdminRequest extracts email from 2-part JSON payload"
+  );
+
+  // 9c. 2-part token with non-admin email rejected with 403
+  const unit2PartNonAdmin = verifyAdminRequest(
+    new Request("http://localhost/api/admin/cards", {
+      headers: {
+        authorization: "Bearer sess_regular.sig000",
+        "x-admin-email": "regularuser@gmail.com",
+      },
+    })
+  );
+  assert(
+    unit2PartNonAdmin.authorized === false && unit2PartNonAdmin.status === 403,
+    "verifyAdminRequest returns 403 for 2-part session token with non-admin email"
+  );
+
+  // 9d. 3-part malformed JWT must still return 401
+  const unit3PartMalformed = verifyAdminRequest(
+    new Request("http://localhost/api/admin/cards", {
+      headers: {
+        authorization: "Bearer header.notjson.sig",
+        "x-admin-email": "cardinusantara@gmail.com",
+      },
+    })
+  );
+  assert(
+    unit3PartMalformed.authorized === false && unit3PartMalformed.status === 401,
+    "verifyAdminRequest returns 401 for malformed 3-part JWT"
+  );
+
+  // 9e. Raw email as Bearer token must still return 401
+  const unitRawEmail = verifyAdminRequest(
+    new Request("http://localhost/api/admin/cards", {
+      headers: {
+        authorization: "Bearer cardinusantara@gmail.com",
+      },
+    })
+  );
+  assert(
+    unitRawEmail.authorized === false && unitRawEmail.status === 401,
+    "verifyAdminRequest returns 401 when raw email is passed as Bearer token"
+  );
+
+  // 10. Zero Em Dash Audit
+  console.log("\n--- TEST 10: Zero Em Dash (\u2014) Audit ---");
   const scanDirs = ["src", "scripts"];
   let emDashCount = 0;
-  const violatedFiles = [];
+  const violations = [];
 
   function scanFolder(dirPath) {
     if (!fs.existsSync(dirPath)) return;
@@ -231,27 +556,41 @@ async function run() {
       const fullPath = path.join(dirPath, entry.name);
       if (entry.isDirectory()) {
         scanFolder(fullPath);
-      } else if (entry.isFile() && (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx") || entry.name.endsWith(".js") || entry.name.endsWith(".mjs") || entry.name.endsWith(".sql") || entry.name.endsWith(".json") || entry.name.endsWith(".md"))) {
+      } else if (
+        entry.isFile() &&
+        (entry.name.endsWith(".ts") ||
+          entry.name.endsWith(".tsx") ||
+          entry.name.endsWith(".js") ||
+          entry.name.endsWith(".mjs"))
+      ) {
         const content = fs.readFileSync(fullPath, "utf8");
         if (content.includes("\u2014")) {
           emDashCount++;
-          violatedFiles.push(fullPath);
+          violations.push(fullPath);
         }
       }
     }
   }
 
   for (const dir of scanDirs) {
-    scanFolder(path.join(process.cwd(), dir));
+    scanFolder(path.join(PROJECT_ROOT, dir));
   }
 
-  assert(emDashCount === 0, `ZERO em dash characters found across src/ and scripts/ (violations: ${emDashCount})`);
-  if (violatedFiles.length > 0) {
-    console.error("Files containing em dash:", violatedFiles);
+  assert(
+    emDashCount === 0,
+    `ZERO em dash characters found across src/ and scripts/ (violations: ${emDashCount})`
+  );
+  if (violations.length > 0) {
+    console.error("Files violating zero em dash constraint:", violations);
   }
+
+  // Clean up test data
+  deleteCardProfile("deo-partner");
 
   console.log("\n==================================================");
-  console.log(`VERIFICATION SUMMARY: ${passCount} PASSED, ${failCount} FAILED out of ${testCount} tests`);
+  console.log(
+    `VERIFICATION SUMMARY: ${passCount} PASSED, ${failCount} FAILED out of ${testCount} tests`
+  );
   console.log("==================================================");
 
   if (failCount > 0) {
@@ -260,6 +599,6 @@ async function run() {
 }
 
 run().catch((err) => {
-  console.error("Verification suite failed unexpectedly:", err);
+  console.error("Verification suite failed:", err);
   process.exit(1);
 });

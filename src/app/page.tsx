@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import Link from "next/link";
 import {
   CreditCard,
@@ -34,11 +34,10 @@ import {
   Copy,
   HelpCircle,
 } from "lucide-react";
-import { useAppStore, useAuthSession } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import { CardiMomLogo, CardiMomIcon } from "@/components/CardiMomLogo";
 
 export default function HomePage() {
-  const { hasHydrated, isAuthenticated } = useAuthSession();
   const { theme, toggleTheme, locale, toggleLocale } = useAppStore();
   const isDark = theme === "dark";
 
@@ -159,20 +158,18 @@ export default function HomePage() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
-        isDark
+      className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${isDark
           ? "bg-[#090D16] text-white selection:bg-sky-500 selection:text-white"
           : "bg-[#F8FAFD] text-[#0A1633] selection:bg-sky-500 selection:text-white"
-      }`}
+        }`}
     >
       {/* 01. Sticky Header / Navbar */}
       <header className="sticky top-2 z-50 max-w-6xl mx-auto px-4 w-full">
         <div
-          className={`backdrop-blur-xl border rounded-2xl px-5 py-3 flex items-center justify-between shadow-lg transition-colors ${
-            isDark
+          className={`backdrop-blur-xl border rounded-2xl px-5 py-3 flex items-center justify-between shadow-lg transition-colors ${isDark
               ? "bg-[#0E1626]/90 border-white/10 shadow-black/40"
               : "bg-white/95 border-[#E6ECF7] shadow-[0_10px_30px_rgba(10,22,51,0.05)]"
-          }`}
+            }`}
         >
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center">
@@ -186,9 +183,8 @@ export default function HomePage() {
 
           {/* Desktop Nav Links */}
           <nav
-            className={`hidden md:flex items-center gap-6 text-[13px] font-semibold ${
-              isDark ? "text-slate-300" : "text-[#3D4B6B]"
-            }`}
+            className={`hidden md:flex items-center gap-6 text-[13px] font-semibold ${isDark ? "text-slate-300" : "text-[#3D4B6B]"
+              }`}
           >
             <a href="#fitur" className="hover:text-sky-600 transition">
               Fitur Kartu
@@ -209,48 +205,27 @@ export default function HomePage() {
             <a href="#faq" className="hover:text-sky-600 transition">
               FAQ
             </a>
-            {isAuthenticated && (
-              <Link
-                href="/dashboard/card"
-                className="hover:text-sky-600 transition font-bold text-[#0258A4] dark:text-[#38bdf8]"
-              >
-                Dashboard
-              </Link>
-            )}
           </nav>
 
           {/* Action CTAs */}
           <div className="flex items-center gap-2.5">
-            {isAuthenticated ? (
-              <Link
-                href="/dashboard/card"
-                className="bg-gradient-to-r from-[#0258A4] to-[#1E4FFF] hover:from-[#01417A] hover:to-[#0258A4] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition flex items-center gap-1.5"
-              >
-                <span>Masuk ke Dashboard</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className={`text-xs font-bold px-3.5 py-2 rounded-xl transition border ${
-                    isDark
-                      ? "bg-white/5 border-white/10 hover:bg-white/10 text-white"
-                      : "bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-800"
-                  }`}
-                >
-                  Masuk Akun
-                </Link>
+            <Link
+              href="/login"
+              className={`text-xs font-bold px-3.5 py-2 rounded-xl transition border ${isDark
+                  ? "bg-white/5 border-white/10 hover:bg-white/10 text-white"
+                  : "bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-800"
+                }`}
+            >
+              Masuk Akun
+            </Link>
 
-                <Link
-                  href="/activate"
-                  className="bg-gradient-to-r from-[#0258A4] to-[#1E4FFF] hover:from-[#01417A] hover:to-[#0258A4] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition flex items-center gap-1.5"
-                >
-                  <span>Aktivasi Kartu</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </>
-            )}
+            <Link
+              href="/activate"
+              className="bg-gradient-to-r from-[#0258A4] to-[#1E4FFF] hover:from-[#01417A] hover:to-[#0258A4] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition flex items-center gap-1.5"
+            >
+              <span>Aktivasi Kartu</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
         </div>
       </header>
@@ -261,15 +236,14 @@ export default function HomePage() {
 
         <div className="max-w-6xl mx-auto px-6 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
-            
+
             {/* Left Column: Value Prop */}
             <div className="lg:col-span-6 flex flex-col items-start text-left">
               <div
-                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-[11px] font-bold tracking-wide uppercase mb-4 ${
-                  isDark
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-[11px] font-bold tracking-wide uppercase mb-4 ${isDark
                     ? "bg-sky-500/10 border-sky-500/30 text-sky-400"
                     : "bg-[#EEF4FF] border-[#1E4FFF]/25 text-[#1E4FFF]"
-                }`}
+                  }`}
               >
                 <Sparkles className="w-3.5 h-3.5 text-[#1E4FFF]" />
                 <span>AI MEETING INTELLIGENCE + SMART NFC</span>
@@ -284,68 +258,39 @@ export default function HomePage() {
               </h1>
 
               <p
-                className={`text-base leading-relaxed mb-7 max-w-xl ${
-                  isDark ? "text-slate-300" : "text-[#3D4B6B]"
-                }`}
+                className={`text-base leading-relaxed mb-7 max-w-xl ${isDark ? "text-slate-300" : "text-[#3D4B6B]"
+                  }`}
               >
                 Tinggalkan kartu nama kertas kuno. Cardi menggabungkan kartu bisnis NFC fisik kelas eksekutif dengan kecerdasan AI MoM. Simpan kontak (.vcf) instan, sinkronisasi jadwal Google Calendar, rekam percakapan rapat, dan bagikan notula resmi ke WhatsApp tanpa catat manual.
               </p>
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-3.5 mb-8 w-full sm:w-auto">
-                {isAuthenticated ? (
-                  <>
-                    <Link
-                      href="/dashboard/card"
-                      className="w-full sm:w-auto bg-gradient-to-r from-[#0258A4] via-[#1E4FFF] to-[#00C2D1] hover:brightness-110 text-white px-6 py-3.5 rounded-xl font-bold text-sm shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2 transition"
-                    >
-                      <span>Masuk ke Dashboard</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
+                <Link
+                  href="/activate"
+                  className="w-full sm:w-auto bg-gradient-to-r from-[#0258A4] via-[#1E4FFF] to-[#00C2D1] hover:brightness-110 text-white px-6 py-3.5 rounded-xl font-bold text-sm shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2 transition"
+                >
+                  <Radio className="w-4 h-4 text-cyan-200 animate-pulse" />
+                  <span>Aktivasi Kartu Fisik</span>
+                </Link>
 
-                    <Link
-                      href="/activate"
-                      className={`w-full sm:w-auto border px-6 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-xs ${
-                        isDark
-                          ? "bg-white/5 hover:bg-white/10 border-white/15 text-white"
-                          : "bg-white hover:bg-slate-50 border-[#E6ECF7] text-[#0A1633]"
-                      }`}
-                    >
-                      <Radio className="w-4 h-4 text-[#0258A4]" />
-                      <span>Aktivasi Kartu Fisik</span>
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/activate"
-                      className="w-full sm:w-auto bg-gradient-to-r from-[#0258A4] via-[#1E4FFF] to-[#00C2D1] hover:brightness-110 text-white px-6 py-3.5 rounded-xl font-bold text-sm shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2 transition"
-                    >
-                      <Radio className="w-4 h-4 text-cyan-200 animate-pulse" />
-                      <span>Aktivasi Kartu Fisik</span>
-                    </Link>
-
-                    <Link
-                      href="/deo"
-                      target="_blank"
-                      className={`w-full sm:w-auto border px-6 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-xs ${
-                        isDark
-                          ? "bg-white/5 hover:bg-white/10 border-white/15 text-white"
-                          : "bg-white hover:bg-slate-50 border-[#E6ECF7] text-[#0A1633]"
-                      }`}
-                    >
-                      <CreditCard className="w-4 h-4 text-[#0258A4]" />
-                      <span>Coba Demo Profil Deo</span>
-                    </Link>
-                  </>
-                )}
+                <Link
+                  href="/deo"
+                  target="_blank"
+                  className={`w-full sm:w-auto border px-6 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-xs ${isDark
+                      ? "bg-white/5 hover:bg-white/10 border-white/15 text-white"
+                      : "bg-white hover:bg-slate-50 border-[#E6ECF7] text-[#0A1633]"
+                    }`}
+                >
+                  <CreditCard className="w-4 h-4 text-[#0258A4]" />
+                  <span>Coba Demo Profil Deo</span>
+                </Link>
               </div>
 
               {/* Trust Badges */}
               <div
-                className={`pt-5 border-t w-full flex flex-wrap items-center gap-5 text-xs font-semibold ${
-                  isDark ? "border-white/10 text-slate-400" : "border-[#E6ECF7] text-[#6B7A9C]"
-                }`}
+                className={`pt-5 border-t w-full flex flex-wrap items-center gap-5 text-xs font-semibold ${isDark ? "border-white/10 text-slate-400" : "border-[#E6ECF7] text-[#6B7A9C]"
+                  }`}
               >
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-[#00A87E]" />
@@ -371,13 +316,12 @@ export default function HomePage() {
                     <button
                       key={finish}
                       onClick={() => setCardFinish(finish)}
-                      className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition cursor-pointer ${
-                        cardFinish === finish
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition cursor-pointer ${cardFinish === finish
                           ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/40"
                           : isDark
-                          ? "bg-white/5 border-white/10 text-slate-400"
-                          : "bg-white border-slate-200 text-slate-600 shadow-2xs"
-                      }`}
+                            ? "bg-white/5 border-white/10 text-slate-400"
+                            : "bg-white border-slate-200 text-slate-600 shadow-2xs"
+                        }`}
                     >
                       {finish === "onyx" ? "Onyx Gold" : finish === "cyan" ? "Royal Cyan" : "Titanium"}
                     </button>
@@ -386,11 +330,10 @@ export default function HomePage() {
 
                 <button
                   onClick={() => setCardSide(cardSide === "front" ? "back" : "front")}
-                  className={`text-[11px] font-bold px-3 py-1 rounded-lg border flex items-center gap-1.5 transition cursor-pointer ${
-                    isDark
+                  className={`text-[11px] font-bold px-3 py-1 rounded-lg border flex items-center gap-1.5 transition cursor-pointer ${isDark
                       ? "bg-white/5 border-white/15 text-slate-300"
                       : "bg-white border-slate-200 text-slate-700 shadow-2xs hover:bg-slate-50"
-                  }`}
+                    }`}
                 >
                   <Rotate3d className="w-3.5 h-3.5 text-sky-500" />
                   <span>Putar Kartu</span>
@@ -517,8 +460,8 @@ export default function HomePage() {
                     {tapStatus === "tapping"
                       ? "Mendekatkan Kartu ke HP..."
                       : tapStatus === "done"
-                      ? "Tap Berhasil! Profil Terbuka"
-                      : "Coba Simulasi Tap Kartu"}
+                        ? "Tap Berhasil! Profil Terbuka"
+                        : "Coba Simulasi Tap Kartu"}
                   </span>
                 </button>
               </div>
@@ -603,13 +546,11 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className={`rounded-3xl border p-6 sm:p-8 max-w-4xl mx-auto shadow-xl transition bg-white dark:bg-[#0E1A30] ${
-            isDark ? "border-white/10" : "border-slate-200"
-          }`}>
-            {/* Audio Wave & Trigger Bar */}
-            <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 ${
-              isDark ? "bg-[#070F1E] border-white/10" : "bg-slate-50 border-slate-200"
+          <div className={`rounded-3xl border p-6 sm:p-8 max-w-4xl mx-auto shadow-xl transition bg-white dark:bg-[#0E1A30] ${isDark ? "border-white/10" : "border-slate-200"
             }`}>
+            {/* Audio Wave & Trigger Bar */}
+            <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 ${isDark ? "bg-[#070F1E] border-white/10" : "bg-slate-50 border-slate-200"
+              }`}>
               <div className="flex items-center gap-3.5">
                 <button
                   onClick={runDemoPipeline}
@@ -632,8 +573,8 @@ export default function HomePage() {
                       ? demoStep === 1
                         ? "🎙️ Membaca rekaman suara audio..."
                         : demoStep === 2
-                        ? "⚡ Mentranskripsi pembicaraan..."
-                        : "🤖 Mengekstrak ringkasan, keputusan & action items..."
+                          ? "⚡ Mentranskripsi pembicaraan..."
+                          : "🤖 Mengekstrak ringkasan, keputusan & action items..."
                       : "Klik tombol play untuk menjalankan simulasi pemrosesan AI"}
                   </p>
                 </div>
@@ -645,9 +586,8 @@ export default function HomePage() {
                   <span
                     key={i}
                     style={{ height: demoRunning ? `${h}px` : "8px" }}
-                    className={`w-1 rounded-full transition-all duration-300 ${
-                      demoRunning ? "bg-sky-500 animate-pulse" : "bg-slate-300 dark:bg-white/20"
-                    }`}
+                    className={`w-1 rounded-full transition-all duration-300 ${demoRunning ? "bg-sky-500 animate-pulse" : "bg-slate-300 dark:bg-white/20"
+                      }`}
                   />
                 ))}
               </div>
@@ -658,41 +598,37 @@ export default function HomePage() {
               <div className={`flex border-b text-xs font-bold gap-6 ${isDark ? "border-white/10" : "border-slate-200"}`}>
                 <button
                   onClick={() => setDemoTab("summary")}
-                  className={`pb-3 border-b-2 transition cursor-pointer ${
-                    demoTab === "summary"
+                  className={`pb-3 border-b-2 transition cursor-pointer ${demoTab === "summary"
                       ? "border-sky-600 text-sky-600 dark:text-sky-400"
                       : "border-transparent text-slate-400 hover:text-slate-700 dark:hover:text-white"
-                  }`}
+                    }`}
                 >
                   Ringkasan Eksekutif
                 </button>
                 <button
                   onClick={() => setDemoTab("decisions")}
-                  className={`pb-3 border-b-2 transition cursor-pointer ${
-                    demoTab === "decisions"
+                  className={`pb-3 border-b-2 transition cursor-pointer ${demoTab === "decisions"
                       ? "border-sky-600 text-sky-600 dark:text-sky-400"
                       : "border-transparent text-slate-400 hover:text-slate-700 dark:hover:text-white"
-                  }`}
+                    }`}
                 >
                   Keputusan Rapat (2)
                 </button>
                 <button
                   onClick={() => setDemoTab("actions")}
-                  className={`pb-3 border-b-2 transition cursor-pointer ${
-                    demoTab === "actions"
+                  className={`pb-3 border-b-2 transition cursor-pointer ${demoTab === "actions"
                       ? "border-sky-600 text-sky-600 dark:text-sky-400"
                       : "border-transparent text-slate-400 hover:text-slate-700 dark:hover:text-white"
-                  }`}
+                    }`}
                 >
                   Action Items &amp; PIC (2)
                 </button>
                 <button
                   onClick={() => setDemoTab("whatsapp")}
-                  className={`pb-3 border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
-                    demoTab === "whatsapp"
+                  className={`pb-3 border-b-2 transition cursor-pointer flex items-center gap-1.5 ${demoTab === "whatsapp"
                       ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
                       : "border-transparent text-slate-400 hover:text-slate-700 dark:hover:text-white"
-                  }`}
+                    }`}
                 >
                   <MessageCircle className="w-3.5 h-3.5 text-emerald-500" />
                   <span>Format WhatsApp</span>
@@ -700,9 +636,8 @@ export default function HomePage() {
               </div>
 
               {/* Tab Content Display */}
-              <div className={`p-5 rounded-2xl border text-xs leading-relaxed ${
-                isDark ? "bg-[#070F1E] border-white/10" : "bg-slate-50 border-slate-200"
-              }`}>
+              <div className={`p-5 rounded-2xl border text-xs leading-relaxed ${isDark ? "bg-[#070F1E] border-white/10" : "bg-slate-50 border-slate-200"
+                }`}>
                 {demoTab === "summary" && (
                   <div className="space-y-3">
                     <p className="text-slate-700 dark:text-slate-300">
@@ -757,7 +692,7 @@ export default function HomePage() {
                 {demoTab === "whatsapp" && (
                   <div className="space-y-3">
                     <div className="font-mono text-[11px] bg-white dark:bg-black/30 p-3.5 rounded-xl border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-{`*NOTULA RESMI CARDI MOM: RAPAT KEMITRAAN EKSEKUTIF*
+                      {`*NOTULA RESMI CARDI MOM: RAPAT KEMITRAAN EKSEKUTIF*
 📅 Tanggal: Hari Ini | ⏱️ Durasi: 24 Menit
 👥 Peserta: Deo Cardi Nathanael (CEO), Reza Pratama (Managing Director)
 
@@ -793,11 +728,10 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
       <section id="google-calendar" className="py-16 md:py-24 relative overflow-hidden">
         <div className="max-w-6xl mx-auto px-6">
           <div
-            className={`rounded-3xl border p-8 md:p-12 relative overflow-hidden ${
-              isDark
+            className={`rounded-3xl border p-8 md:p-12 relative overflow-hidden ${isDark
                 ? "bg-gradient-to-br from-[#0E1A30] via-[#091122] to-[#050914] border-white/10"
                 : "bg-gradient-to-br from-sky-50/70 via-white to-slate-50 border-[#E6ECF7] shadow-sm"
-            }`}
+              }`}
           >
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-7">
@@ -834,10 +768,10 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
                 </div>
 
                 <Link
-                  href={isAuthenticated ? "/dashboard/calendar" : "/login"}
+                  href="/login"
                   className="bg-sky-600 hover:bg-sky-500 text-white px-5 py-3 rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-lg shadow-sky-600/25 transition cursor-pointer"
                 >
-                  <span>{isAuthenticated ? "Buka Kalender Dashboard" : "Masuk dengan Akun Google"}</span>
+                  <span>Masuk dengan Akun Google</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -845,9 +779,8 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
               {/* Graphic illustration */}
               <div className="lg:col-span-5 flex justify-center">
                 <div
-                  className={`w-full max-w-sm border rounded-2xl p-5 shadow-xl ${
-                    isDark ? "bg-[#070F1E] border-white/10" : "bg-white border-[#E6ECF7]"
-                  }`}
+                  className={`w-full max-w-sm border rounded-2xl p-5 shadow-xl ${isDark ? "bg-[#070F1E] border-white/10" : "bg-white border-[#E6ECF7]"
+                    }`}
                 >
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10 mb-4">
                     <div className="flex items-center gap-2">
@@ -938,9 +871,8 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* 1. Card Only */}
-            <div className={`p-6 rounded-3xl border flex flex-col justify-between transition bg-white dark:bg-[#0E1A30] ${
-              isDark ? "border-white/10" : "border-slate-200 shadow-xs"
-            }`}>
+            <div className={`p-6 rounded-3xl border flex flex-col justify-between transition bg-white dark:bg-[#0E1A30] ${isDark ? "border-white/10" : "border-slate-200 shadow-xs"
+              }`}>
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Starter Standalone
@@ -988,9 +920,8 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
             </div>
 
             {/* 2. Card + Quick */}
-            <div className={`p-6 rounded-3xl border flex flex-col justify-between transition bg-white dark:bg-[#0E1A30] ${
-              isDark ? "border-white/10" : "border-slate-200 shadow-xs"
-            }`}>
+            <div className={`p-6 rounded-3xl border flex flex-col justify-between transition bg-white dark:bg-[#0E1A30] ${isDark ? "border-white/10" : "border-slate-200 shadow-xs"
+              }`}>
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
                   Bundling Hemat
@@ -1090,9 +1021,8 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
             </div>
 
             {/* 4. Enterprise / Corporate */}
-            <div className={`p-6 rounded-3xl border flex flex-col justify-between transition bg-white dark:bg-[#0E1A30] ${
-              isDark ? "border-white/10" : "border-slate-200 shadow-xs"
-            }`}>
+            <div className={`p-6 rounded-3xl border flex flex-col justify-between transition bg-white dark:bg-[#0E1A30] ${isDark ? "border-white/10" : "border-slate-200 shadow-xs"
+              }`}>
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Custom Corporate
@@ -1159,11 +1089,10 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
             {faqs.map((faq, i) => (
               <div
                 key={i}
-                className={`border rounded-2xl transition bg-white dark:bg-[#0E1A30] overflow-hidden ${
-                  openFaq === i
+                className={`border rounded-2xl transition bg-white dark:bg-[#0E1A30] overflow-hidden ${openFaq === i
                     ? "border-sky-500 shadow-sm"
                     : "border-slate-200 dark:border-white/10"
-                }`}
+                  }`}
               >
                 <button
                   type="button"
@@ -1172,9 +1101,8 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
                 >
                   <span>{faq.q}</span>
                   <ChevronDown
-                    className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
-                      openFaq === i ? "rotate-180 text-sky-600" : ""
-                    }`}
+                    className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openFaq === i ? "rotate-180 text-sky-600" : ""
+                      }`}
                   />
                 </button>
                 {openFaq === i && (
@@ -1209,11 +1137,10 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
               href="https://play.google.com/store/apps/details?id=com.cardinusantara.cardiagentaimom&pcampaignid=web_share"
               target="_blank"
               rel="noreferrer"
-              className={`px-5 py-3.5 rounded-2xl border flex items-center gap-3.5 transition group hover:-translate-y-0.5 shadow-sm ${
-                isDark
+              className={`px-5 py-3.5 rounded-2xl border flex items-center gap-3.5 transition group hover:-translate-y-0.5 shadow-sm ${isDark
                   ? "bg-white/5 border-white/12 hover:bg-white/10 text-white"
                   : "bg-white border-[#E6ECF7] hover:border-blue-400 text-slate-900"
-              }`}
+                }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/google-play-badge.svg" alt="Google Play Store" className="h-9 w-auto" />
@@ -1230,11 +1157,10 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
               href="https://apps.apple.com/us/app/cardi-mom/id6809435140"
               target="_blank"
               rel="noreferrer"
-              className={`px-5 py-3.5 rounded-2xl border flex items-center gap-3.5 transition group hover:-translate-y-0.5 shadow-sm ${
-                isDark
+              className={`px-5 py-3.5 rounded-2xl border flex items-center gap-3.5 transition group hover:-translate-y-0.5 shadow-sm ${isDark
                   ? "bg-white/5 border-white/12 hover:bg-white/10 text-white"
                   : "bg-white border-[#E6ECF7] hover:border-blue-400 text-slate-900"
-              }`}
+                }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/app-store-badge.svg" alt="Apple App Store" className="h-9 w-auto" />
@@ -1313,11 +1239,10 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
 
       {/* 10. COMPREHENSIVE RICH FOOTER (Matched to aiagent main & mom.astro) */}
       <footer
-        className={`border-t py-14 text-xs transition-colors ${
-          isDark
+        className={`border-t py-14 text-xs transition-colors ${isDark
             ? "border-white/10 bg-[#05080E] text-slate-400"
             : "border-[#E6ECF7] bg-white text-[#3D4B6B]"
-        }`}
+          }`}
       >
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-slate-200 dark:border-white/10">
@@ -1368,7 +1293,7 @@ _Dibuat otomatis via Cardi Smart NFC & AI MoM (cardi.co.id)_`}
               </h4>
               <ul className="space-y-1.5 opacity-80">
                 <li><Link href="/activate" className="hover:text-sky-600 transition">Aktivasi Kartu Baru</Link></li>
-                <li><Link href={isAuthenticated ? "/dashboard/card" : "/login"} className="hover:text-sky-600 transition">{isAuthenticated ? "Dashboard Akun" : "Login Akun Google"}</Link></li>
+                <li><Link href="/login" className="hover:text-sky-600 transition">Login Akun Google</Link></li>
                 <li><Link href="/deo" className="hover:text-sky-600 transition">Demo Hasil Tap Kartu</Link></li>
                 <li><a href="https://wa.me/6281289895646" target="_blank" rel="noreferrer" className="hover:text-sky-600 transition">Konsultasi via WhatsApp</a></li>
               </ul>

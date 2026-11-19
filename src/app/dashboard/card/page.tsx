@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
+  CreditCard,
   Radio,
   ExternalLink,
   Copy,
@@ -14,16 +15,26 @@ import {
   Edit3,
   Save,
   Sparkles,
+  Smartphone,
+  Share2,
   TrendingUp,
   Coins,
+  Globe,
+  Mail,
+  Phone,
+  MapPin,
+  Building,
+  RotateCw,
   Search,
+  Filter,
+  Info,
   X,
+  ChevronRight,
   ShieldCheck,
   Camera,
   Image as ImageIcon,
   Crop,
   Trash2,
-  Download,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { ContactLead } from "@/lib/types";
@@ -31,6 +42,7 @@ import { getTranslation } from "@/lib/i18n";
 import { cardiApi } from "@/lib/api";
 import AudioRecordModal from "@/components/AudioRecordModal";
 import { PhotoCropModal } from "@/components/PhotoCropModal";
+import { CardiMomIcon } from "@/components/CardiMomLogo";
 import { isAdminEmail } from "@/lib/adminAuth";
 
 export default function DashboardCardPage() {
@@ -38,7 +50,6 @@ export default function DashboardCardPage() {
     cardProfile,
     updateCardProfile,
     leads,
-    setLeads,
     theme,
     locale,
     account,
@@ -47,13 +58,7 @@ export default function DashboardCardPage() {
 
   const isDark = theme === "dark";
   const t = getTranslation(locale);
-
-  const isAdmin = Boolean(
-    sessionToken &&
-    sessionToken.trim().length > 0 &&
-    account?.email &&
-    isAdminEmail(account.email)
-  );
+  const isAdmin = Boolean(sessionToken && account?.email && isAdminEmail(account.email));
 
   // Active Card Status determination: true if activated, chip tagged, or profile has registered username
   const hasActiveCard = Boolean(
@@ -102,51 +107,9 @@ export default function DashboardCardPage() {
   const [searchLeadQuery, setSearchLeadQuery] = useState("");
   const [selectedLeadStatus, setSelectedLeadStatus] = useState<"all" | "hot" | "warm" | "cold">("all");
 
-  const [prevCardProfile, setPrevCardProfile] = useState(cardProfile);
-  if (cardProfile !== prevCardProfile) {
-    setPrevCardProfile(cardProfile);
-    setEditForm(cardProfile);
-  }
-
   useEffect(() => {
-    if (!cardProfile.username || cardProfile.username === "user") return;
-    const fetchLeads = async () => {
-      try {
-        const res = await fetch(`/api/lead/${encodeURIComponent(cardProfile.username)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && Array.isArray(data.leads)) {
-            setLeads(data.leads);
-          }
-        }
-      } catch (err) {
-        console.warn("Failed to fetch leads:", err);
-      }
-    };
-    fetchLeads();
-  }, [cardProfile.username, setLeads]);
-
-  const exportLeadsToCsv = () => {
-    if (leads.length === 0) return;
-    const headers = ["Nama", "Perusahaan", "No. HP", "Email", "Catatan", "Status", "Waktu Simpan"];
-    const rows = leads.map((l) => [
-      `"${(l.name || "").replace(/"/g, '""')}"`,
-      `"${(l.company || "").replace(/"/g, '""')}"`,
-      `"${(l.phone || "").replace(/"/g, '""')}"`,
-      `"${(l.email || "").replace(/"/g, '""')}"`,
-      `"${(l.notes || "").replace(/"/g, '""')}"`,
-      `"${(l.status || "warm").replace(/"/g, '""')}"`,
-      `"${new Date(l.createdAt || Date.now()).toISOString()}"`,
-    ]);
-    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `cardi_leads_${cardProfile.username || "kartu"}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+    setEditForm(cardProfile);
+  }, [cardProfile]);
 
   useEffect(() => {
     if (!cardProfile.username || cardProfile.username === "user") return;
@@ -280,9 +243,8 @@ export default function DashboardCardPage() {
     <div className="space-y-8 animate-in fade-in duration-200">
       {/* 01. Page Title & Action Bar */}
       <div
-        className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b transition-colors ${
-          isDark ? "border-white/10" : "border-slate-200"
-        }`}
+        className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b transition-colors ${isDark ? "border-white/10" : "border-slate-200"
+          }`}
       >
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -293,16 +255,14 @@ export default function DashboardCardPage() {
             <span className="text-xs opacity-60">Cardi AI Ecosystem</span>
           </div>
           <h1
-            className={`text-2xl font-black tracking-tight ${
-              isDark ? "text-white" : "text-[#0A1633]"
-            }`}
+            className={`text-2xl font-black tracking-tight ${isDark ? "text-white" : "text-[#0A1633]"
+              }`}
           >
             {t.cardDash.title}
           </h1>
           <p
-            className={`text-xs mt-1 max-w-xl ${
-              isDark ? "text-white/60" : "text-slate-500"
-            }`}
+            className={`text-xs mt-1 max-w-xl ${isDark ? "text-white/60" : "text-slate-500"
+              }`}
           >
             {t.cardDash.subtitle}
           </p>
@@ -324,28 +284,12 @@ export default function DashboardCardPage() {
             </div>
           )}
 
-          {isAdmin && (
-            <Link
-              href="/dashboard/admin"
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold transition ${
-                isDark
-                  ? "bg-white/5 hover:bg-white/10 border-white/15 text-white/90"
-                  : "bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm"
-              }`}
-              title="Buka Konsol Admin & Database Kartu"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-sky-500" />
-              <span>Kelola Semua Kartu</span>
-            </Link>
-          )}
-
           <button
             onClick={handleCopyLink}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold transition ${
-              isDark
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold transition ${isDark
                 ? "bg-white/5 hover:bg-white/10 border-white/15 text-white/90"
                 : "bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm"
-            }`}
+              }`}
           >
             {copied ? (
               <Check className="w-3.5 h-3.5 text-[#10B981]" />
@@ -363,17 +307,26 @@ export default function DashboardCardPage() {
             <span>{t.common.viewPublic}</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </Link>
+
+          {isAdmin && (
+            <Link
+              href="/dashboard/admin"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/30 text-xs font-bold text-purple-600 dark:text-purple-400 transition shadow-sm"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Kelola Semua Kartu</span>
+            </Link>
+          )}
         </div>
       </div>
 
       {/* 02. Onboarding Alert (If Card has not been configured or activated) */}
       {!hasActiveCard && (
         <div
-          className={`rounded-2xl p-5 border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition ${
-            isDark
+          className={`rounded-2xl p-5 border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition ${isDark
               ? "bg-gradient-to-r from-[#1E4FFF]/20 via-[#00C2D1]/15 to-transparent border-[#1E4FFF]/40 text-white"
               : "bg-gradient-to-r from-blue-50 via-cyan-50 to-white border-blue-200 text-[#0A1633]"
-          }`}
+            }`}
         >
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-[#1E4FFF]/20 border border-[#1E4FFF]/40 text-[#1E4FFF] flex items-center justify-center flex-shrink-0">
@@ -393,11 +346,10 @@ export default function DashboardCardPage() {
             </Link>
             <button
               onClick={() => setIsEditingProfile(true)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition whitespace-nowrap border ${
-                isDark
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition whitespace-nowrap border ${isDark
                   ? "bg-white/10 hover:bg-white/15 text-white border-white/10"
                   : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-sm"
-              }`}
+                }`}
             >
               {t.cardDash.btnManualEdit}
             </button>
@@ -409,11 +361,10 @@ export default function DashboardCardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Total Taps */}
         <div
-          className={`p-4 rounded-2xl border transition ${
-            isDark
+          className={`p-4 rounded-2xl border transition ${isDark
               ? "bg-[#0E1A33] border-white/10 shadow-lg"
               : "bg-white border-slate-200 shadow-sm"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold uppercase tracking-wider opacity-60">
@@ -434,11 +385,10 @@ export default function DashboardCardPage() {
 
         {/* Metric 2: Contacts Collected */}
         <div
-          className={`p-4 rounded-2xl border transition ${
-            isDark
+          className={`p-4 rounded-2xl border transition ${isDark
               ? "bg-[#0E1A33] border-white/10 shadow-lg"
               : "bg-white border-slate-200 shadow-sm"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold uppercase tracking-wider opacity-60">
@@ -458,11 +408,10 @@ export default function DashboardCardPage() {
 
         {/* Metric 3: MoM Meetings */}
         <div
-          className={`p-4 rounded-2xl border transition ${
-            isDark
+          className={`p-4 rounded-2xl border transition ${isDark
               ? "bg-[#0E1A33] border-white/10 shadow-lg"
               : "bg-white border-slate-200 shadow-sm"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold uppercase tracking-wider opacity-60">
@@ -482,11 +431,10 @@ export default function DashboardCardPage() {
 
         {/* Metric 4: Conversion Rate */}
         <div
-          className={`p-4 rounded-2xl border transition ${
-            isDark
+          className={`p-4 rounded-2xl border transition ${isDark
               ? "bg-[#0E1A33] border-white/10 shadow-lg"
               : "bg-white border-slate-200 shadow-sm"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold uppercase tracking-wider opacity-60">
@@ -518,29 +466,26 @@ export default function DashboardCardPage() {
 
             {/* Front / Back Flip Switch */}
             <div
-              className={`p-0.5 rounded-lg border flex items-center text-[10px] font-semibold ${
-                isDark ? "bg-white/5 border-white/10" : "bg-slate-100 border-slate-200"
-              }`}
+              className={`p-0.5 rounded-lg border flex items-center text-[10px] font-semibold ${isDark ? "bg-white/5 border-white/10" : "bg-slate-100 border-slate-200"
+                }`}
             >
               <button
                 type="button"
                 onClick={() => setCardSide("front")}
-                className={`px-2.5 py-1 rounded-md transition ${
-                  cardSide === "front"
+                className={`px-2.5 py-1 rounded-md transition ${cardSide === "front"
                     ? "bg-[#1E4FFF] text-white shadow-sm"
                     : "opacity-60 hover:opacity-100"
-                }`}
+                  }`}
               >
                 {t.cardDash.frontView}
               </button>
               <button
                 type="button"
                 onClick={() => setCardSide("back")}
-                className={`px-2.5 py-1 rounded-md transition ${
-                  cardSide === "back"
+                className={`px-2.5 py-1 rounded-md transition ${cardSide === "back"
                     ? "bg-[#1E4FFF] text-white shadow-sm"
                     : "opacity-60 hover:opacity-100"
-                }`}
+                  }`}
               >
                 {t.cardDash.backView}
               </button>
@@ -645,13 +590,12 @@ export default function DashboardCardPage() {
               <button
                 key={finish}
                 onClick={() => updateCardProfile({ cardDesign: finish })}
-                className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold transition flex items-center gap-1.5 ${
-                  cardProfile.cardDesign === finish
+                className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold transition flex items-center gap-1.5 ${cardProfile.cardDesign === finish
                     ? "border-[#1E4FFF] bg-[#1E4FFF]/15 text-[#1E4FFF]"
                     : isDark
-                    ? "border-white/10 bg-white/5 text-white/60 hover:text-white"
-                    : "border-slate-200 bg-white text-slate-600 hover:text-slate-900"
-                }`}
+                      ? "border-white/10 bg-white/5 text-white/60 hover:text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:text-slate-900"
+                  }`}
               >
                 <div
                   className="w-2.5 h-2.5 rounded-full"
@@ -660,8 +604,8 @@ export default function DashboardCardPage() {
                       finish === "black-gold"
                         ? "#D4AF37"
                         : finish === "royal-blue"
-                        ? "#00C2D1"
-                        : "#94A3B8",
+                          ? "#00C2D1"
+                          : "#94A3B8",
                   }}
                 />
                 <span>{finishThemes[finish].name}</span>
@@ -688,17 +632,15 @@ export default function DashboardCardPage() {
 
         {/* Right Column: Clean Tabbed Profile Editor (7 cols) */}
         <div
-          className={`lg:col-span-7 rounded-2xl border p-6 transition ${
-            isDark
+          className={`lg:col-span-7 rounded-2xl border p-6 transition ${isDark
               ? "bg-[#0E1A33] border-white/10 shadow-xl"
               : "bg-white border-slate-200 shadow-sm"
-          }`}
+            }`}
         >
           {/* Header & Mode Switch */}
           <div
-            className={`flex items-center justify-between pb-4 mb-5 border-b ${
-              isDark ? "border-white/10" : "border-slate-200"
-            }`}
+            className={`flex items-center justify-between pb-4 mb-5 border-b ${isDark ? "border-white/10" : "border-slate-200"
+              }`}
           >
             <div>
               <h2 className="text-base font-bold">
@@ -712,13 +654,12 @@ export default function DashboardCardPage() {
             <button
               type="button"
               onClick={() => setIsEditingProfile(!isEditingProfile)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-                isEditingProfile
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition ${isEditingProfile
                   ? "bg-red-500/15 text-red-400 border-red-500/30"
                   : isDark
-                  ? "bg-white/5 hover:bg-white/10 text-white border-white/15"
-                  : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200"
-              }`}
+                    ? "bg-white/5 hover:bg-white/10 text-white border-white/15"
+                    : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200"
+                }`}
             >
               <Edit3 className="w-3.5 h-3.5" />
               <span>{isEditingProfile ? t.common.cancel : t.common.edit}</span>
@@ -862,9 +803,8 @@ export default function DashboardCardPage() {
             <form onSubmit={handleSaveProfile} className="space-y-4">
               {/* Tab Pills */}
               <div
-                className={`flex rounded-xl p-1 border mb-4 ${
-                  isDark ? "bg-white/5 border-white/10" : "bg-slate-100 border-slate-200"
-                }`}
+                className={`flex rounded-xl p-1 border mb-4 ${isDark ? "bg-white/5 border-white/10" : "bg-slate-100 border-slate-200"
+                  }`}
               >
                 {(
                   [
@@ -877,11 +817,10 @@ export default function DashboardCardPage() {
                     key={tab.id}
                     type="button"
                     onClick={() => setEditorTab(tab.id)}
-                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${
-                      editorTab === tab.id
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${editorTab === tab.id
                         ? "bg-[#1E4FFF] text-white shadow-sm"
                         : "opacity-60 hover:opacity-100"
-                    }`}
+                      }`}
                   >
                     {tab.label}
                   </button>
@@ -938,11 +877,10 @@ export default function DashboardCardPage() {
                         <button
                           type="button"
                           onClick={() => galleryInputRef.current?.click()}
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition ${
-                            isDark
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition ${isDark
                               ? "bg-white/10 hover:bg-white/15 text-white border-white/15"
                               : "bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-xs"
-                          }`}
+                            }`}
                         >
                           <ImageIcon className="w-3.5 h-3.5" />
                           <span>Galeri</span>
@@ -954,11 +892,10 @@ export default function DashboardCardPage() {
                               setRawImageForCrop(editForm.avatarUrl || "");
                               setCropModalOpen(true);
                             }}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition ${
-                              isDark
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition ${isDark
                                 ? "bg-white/10 hover:bg-white/15 text-white border-white/15"
                                 : "bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-xs"
-                            }`}
+                              }`}
                             title="Crop atau sesuaikan foto"
                           >
                             <Crop className="w-3.5 h-3.5" />
@@ -990,11 +927,10 @@ export default function DashboardCardPage() {
                       onChange={(e) =>
                         setEditForm({ ...editForm, fullName: e.target.value })
                       }
-                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                        isDark
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                           ? "bg-[#070D1E] border-white/15 text-white"
                           : "bg-slate-50 border-slate-300 text-slate-900"
-                      }`}
+                        }`}
                     />
                   </div>
 
@@ -1009,11 +945,10 @@ export default function DashboardCardPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, headline: e.target.value })
                         }
-                        className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                          isDark
+                        className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                             ? "bg-[#070D1E] border-white/15 text-white"
                             : "bg-slate-50 border-slate-300 text-slate-900"
-                        }`}
+                          }`}
                       />
                     </div>
                     <div>
@@ -1026,11 +961,10 @@ export default function DashboardCardPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, company: e.target.value })
                         }
-                        className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                          isDark
+                        className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                             ? "bg-[#070D1E] border-white/15 text-white"
                             : "bg-slate-50 border-slate-300 text-slate-900"
-                        }`}
+                          }`}
                       />
                     </div>
                   </div>
@@ -1045,11 +979,10 @@ export default function DashboardCardPage() {
                       onChange={(e) =>
                         setEditForm({ ...editForm, bio: e.target.value })
                       }
-                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] resize-none ${
-                        isDark
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] resize-none ${isDark
                           ? "bg-[#070D1E] border-white/15 text-white"
                           : "bg-slate-50 border-slate-300 text-slate-900"
-                      }`}
+                        }`}
                     />
                   </div>
                 </div>
@@ -1069,11 +1002,10 @@ export default function DashboardCardPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, phone: e.target.value })
                         }
-                        className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                          isDark
+                        className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                             ? "bg-[#070D1E] border-white/15 text-white"
                             : "bg-slate-50 border-slate-300 text-slate-900"
-                        }`}
+                          }`}
                       />
                     </div>
                     <div>
@@ -1086,11 +1018,10 @@ export default function DashboardCardPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, email: e.target.value })
                         }
-                        className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                          isDark
+                        className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                             ? "bg-[#070D1E] border-white/15 text-white"
                             : "bg-slate-50 border-slate-300 text-slate-900"
-                        }`}
+                          }`}
                       />
                     </div>
                   </div>
@@ -1106,11 +1037,10 @@ export default function DashboardCardPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, website: e.target.value })
                         }
-                        className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                          isDark
+                        className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                             ? "bg-[#070D1E] border-white/15 text-white"
                             : "bg-slate-50 border-slate-300 text-slate-900"
-                        }`}
+                          }`}
                       />
                     </div>
                     <div>
@@ -1123,11 +1053,10 @@ export default function DashboardCardPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, location: e.target.value })
                         }
-                        className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                          isDark
+                        className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                             ? "bg-[#070D1E] border-white/15 text-white"
                             : "bg-slate-50 border-slate-300 text-slate-900"
-                        }`}
+                          }`}
                       />
                     </div>
                   </div>
@@ -1154,11 +1083,10 @@ export default function DashboardCardPage() {
                           },
                         })
                       }
-                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                        isDark
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                           ? "bg-[#070D1E] border-white/15 text-white"
                           : "bg-slate-50 border-slate-300 text-slate-900"
-                      }`}
+                        }`}
                     />
                   </div>
 
@@ -1179,11 +1107,10 @@ export default function DashboardCardPage() {
                           },
                         })
                       }
-                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                        isDark
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                           ? "bg-[#070D1E] border-white/15 text-white"
                           : "bg-slate-50 border-slate-300 text-slate-900"
-                      }`}
+                        }`}
                     />
                   </div>
 
@@ -1204,11 +1131,10 @@ export default function DashboardCardPage() {
                           },
                         })
                       }
-                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                        isDark
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                           ? "bg-[#070D1E] border-white/15 text-white"
                           : "bg-slate-50 border-slate-300 text-slate-900"
-                      }`}
+                        }`}
                     />
                   </div>
 
@@ -1229,11 +1155,10 @@ export default function DashboardCardPage() {
                           },
                         })
                       }
-                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                        isDark
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                           ? "bg-[#070D1E] border-white/15 text-white"
                           : "bg-slate-50 border-slate-300 text-slate-900"
-                      }`}
+                        }`}
                     />
                   </div>
 
@@ -1254,11 +1179,10 @@ export default function DashboardCardPage() {
                           },
                         })
                       }
-                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                        isDark
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                           ? "bg-[#070D1E] border-white/15 text-white"
                           : "bg-slate-50 border-slate-300 text-slate-900"
-                      }`}
+                        }`}
                     />
                   </div>
 
@@ -1279,11 +1203,10 @@ export default function DashboardCardPage() {
                           },
                         })
                       }
-                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                        isDark
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                           ? "bg-[#070D1E] border-white/15 text-white"
                           : "bg-slate-50 border-slate-300 text-slate-900"
-                      }`}
+                        }`}
                     />
                   </div>
 
@@ -1304,11 +1227,10 @@ export default function DashboardCardPage() {
                           },
                         })
                       }
-                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                        isDark
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                           ? "bg-[#070D1E] border-white/15 text-white"
                           : "bg-slate-50 border-slate-300 text-slate-900"
-                      }`}
+                        }`}
                     />
                   </div>
 
@@ -1329,11 +1251,10 @@ export default function DashboardCardPage() {
                           },
                         })
                       }
-                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${
-                        isDark
+                      className={`w-full rounded-xl px-3.5 py-2.5 border focus:outline-none focus:border-[#1E4FFF] ${isDark
                           ? "bg-[#070D1E] border-white/15 text-white"
                           : "bg-slate-50 border-slate-300 text-slate-900"
-                      }`}
+                        }`}
                     />
                   </div>
                 </div>
@@ -1344,11 +1265,10 @@ export default function DashboardCardPage() {
                 <button
                   type="button"
                   onClick={() => setIsEditingProfile(false)}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition ${
-                    isDark
+                  className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition ${isDark
                       ? "bg-white/10 hover:bg-white/15 text-white"
                       : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                  }`}
+                    }`}
                 >
                   {t.common.cancel}
                 </button>
@@ -1367,16 +1287,14 @@ export default function DashboardCardPage() {
 
       {/* 05. Contacts & Leads CRM Table */}
       <div
-        className={`rounded-2xl border p-6 transition ${
-          isDark
+        className={`rounded-2xl border p-6 transition ${isDark
             ? "bg-[#0E1A33] border-white/10 shadow-xl"
             : "bg-white border-slate-200 shadow-sm"
-        }`}
+          }`}
       >
         <div
-          className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b ${
-            isDark ? "border-white/10" : "border-slate-200"
-          }`}
+          className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b ${isDark ? "border-white/10" : "border-slate-200"
+            }`}
         >
           <div>
             <h3 className="text-base font-bold flex items-center gap-2">
@@ -1400,29 +1318,12 @@ export default function DashboardCardPage() {
                 value={searchLeadQuery}
                 onChange={(e) => setSearchLeadQuery(e.target.value)}
                 placeholder={t.common.search}
-                className={`pl-8 pr-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:border-[#1E4FFF] ${
-                  isDark
+                className={`pl-8 pr-3 py-1.5 text-xs rounded-xl border focus:outline-none focus:border-[#1E4FFF] ${isDark
                     ? "bg-[#070D1E] border-white/15 text-white"
                     : "bg-slate-50 border-slate-300 text-slate-900"
-                }`}
+                  }`}
               />
             </div>
-            <button
-              type="button"
-              onClick={exportLeadsToCsv}
-              disabled={leads.length === 0}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition ${
-                leads.length === 0
-                  ? "opacity-40 cursor-not-allowed border-slate-300 dark:border-white/10"
-                  : isDark
-                  ? "bg-white/5 hover:bg-white/10 border-white/15 text-white"
-                  : "bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm"
-              }`}
-              title="Ekspor daftar prospek ke file CSV"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export CSV</span>
-            </button>
           </div>
         </div>
 
@@ -1431,9 +1332,8 @@ export default function DashboardCardPage() {
           <table className="w-full text-left text-xs">
             <thead>
               <tr
-                className={`border-b uppercase font-bold text-[10px] tracking-wider opacity-50 ${
-                  isDark ? "border-white/10" : "border-slate-200"
-                }`}
+                className={`border-b uppercase font-bold text-[10px] tracking-wider opacity-50 ${isDark ? "border-white/10" : "border-slate-200"
+                  }`}
               >
                 <th className="pb-3">{t.cardDash.colName}</th>
                 <th className="pb-3">{t.cardDash.colContact}</th>
@@ -1443,9 +1343,8 @@ export default function DashboardCardPage() {
               </tr>
             </thead>
             <tbody
-              className={`divide-y ${
-                isDark ? "divide-white/5" : "divide-slate-100"
-              }`}
+              className={`divide-y ${isDark ? "divide-white/5" : "divide-slate-100"
+                }`}
             >
               {filteredLeads.length === 0 ? (
                 <tr>
@@ -1463,9 +1362,8 @@ export default function DashboardCardPage() {
                 filteredLeads.map((lead: ContactLead) => (
                   <tr
                     key={lead.id}
-                    className={`transition ${
-                      isDark ? "hover:bg-white/5" : "hover:bg-slate-50"
-                    }`}
+                    className={`transition ${isDark ? "hover:bg-white/5" : "hover:bg-slate-50"
+                      }`}
                   >
                     <td className="py-3 pr-3">
                       <p className="font-bold">{lead.name}</p>
@@ -1522,9 +1420,8 @@ export default function DashboardCardPage() {
       {showNfcGuideModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div
-            className={`w-full max-w-md rounded-3xl p-6 border shadow-2xl relative ${
-              isDark ? "bg-[#0E1A33] border-white/20 text-white" : "bg-white border-slate-200 text-[#0A1633]"
-            }`}
+            className={`w-full max-w-md rounded-3xl p-6 border shadow-2xl relative ${isDark ? "bg-[#0E1A33] border-white/20 text-white" : "bg-white border-slate-200 text-[#0A1633]"
+              }`}
           >
             <button
               onClick={() => setShowNfcGuideModal(false)}
